@@ -47,14 +47,28 @@ document.querySelectorAll("#nav button").forEach((b) => b.addEventListener("clic
 // ---------- dashboard ----------
 async function refreshDashboard() {
   try {
-    const [projects, influencers, jobs, engines, health] = await Promise.all([
-      api("/api/projects"), api("/api/influencers"), api("/api/jobs?limit=30"), api("/api/engines"), api("/api/health").catch(() => ({})),
+    const [projects, influencers, jobs, engines, health, cloud] = await Promise.all([
+      api("/api/projects"), api("/api/influencers"), api("/api/jobs?limit=30"), api("/api/engines"),
+      api("/api/health").catch(() => ({})), api("/api/cloud/status").catch(() => null),
     ]);
     $("#statProjects").textContent = projects.length;
     $("#statVideos").textContent = projects.filter((p) => p.final_path).length;
     $("#statPending").textContent = jobs.filter((j) => ["queued", "running", "pending", "processing"].includes(j.status)).length;
     $("#statInfluencers").textContent = influencers.length;
     $("#healthLine").textContent = health.status ? `· backend ${health.status}` : "";
+    if (cloud && cloud.worker) {
+      const w = cloud.worker;
+      const label = w.online ? `GPU ONLINE${w.gpu ? " · " + esc(w.gpu) : ""}` : "GPU APAGADO";
+      $("#workerPill").textContent = label;
+      $("#workerPill").className = w.online ? "pill ok" : "pill warn";
+      const hint = $("#workerHint");
+      if (hint) {
+        hint.innerHTML = w.online
+          ? "Worker GPU conectado: puedes generar ahora."
+          : "Worker GPU apagado. Abre tu kernel de Kaggle (ai-ugc-studio-gpu-worker) y pulsa Run All para que procese la cola.";
+        hint.className = w.online ? "hint" : "hint warn-text";
+      }
+    }
     const lp = engines.liveportrait, w = engines.wav2lip, f = engines.fish_audio;
     $("#enginePill").textContent = `LP ${lp.available ? "✓" : "✗"} · Fish ${f.ok ? "✓" : "✗"} · W2L ${w.available ? "✓" : "pendiente"}`;
     $("#engineCards").innerHTML = [

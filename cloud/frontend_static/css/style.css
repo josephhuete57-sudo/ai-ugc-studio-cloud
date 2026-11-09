@@ -5,6 +5,9 @@
 nav{display:flex;gap:6px;flex-wrap:wrap}nav button{background:none;border:1px solid transparent;color:var(--txt);padding:6px 10px;border-radius:8px;cursor:pointer}
 nav button.active{background:var(--panel);border-color:var(--line);color:#fff}nav button:hover{background:var(--panel)}
 .engine-pill{margin-left:auto;font-size:12px;padding:4px 10px;border-radius:99px;border:1px solid var(--line)}
+.pill.ok{border-color:var(--ok);color:var(--ok)}
+.pill.warn{border-color:var(--warn);color:var(--warn)}
+.warn-text{color:var(--warn)}
 .cloudbox{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
 .cloudbox input{background:#0d1117;border:1px solid var(--line);color:var(--txt);border-radius:6px;padding:4px 8px}
 main{padding:22px;max-width:1180px;margin:auto}

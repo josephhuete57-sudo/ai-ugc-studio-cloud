@@ -2,21 +2,36 @@
 
 Se ejecuta contra un backend local en modo kaggle (simula Render). Sin GPU:
 el "worker" sube un MP4 ya existente para validar todo el circuito HTTP.
+Usa la MISMA autenticación firmada Ed25519 que el worker real de Kaggle.
 """
+import time
+from pathlib import Path
+
 import requests
+from cryptography.hazmat.primitives import serialization
 
 B = "http://127.0.0.1:8003"
-WK = {"X-Worker-Key": "test-worker-key"}
 ROOT = r"C:\AI_UGC_STUDIO"
+_KEY = serialization.load_pem_private_key(
+    Path(ROOT, "cloud", "data", "worker_ed25519.pem").read_bytes(), password=None)
+
+
+def wk(path: str) -> dict:
+    ts = str(int(time.time()))
+    return {
+        "X-Worker-Timestamp": ts,
+        "X-Worker-Signature": _KEY.sign(f"{ts}:{path}".encode()).hex(),
+    }
 
 
 def drain():
     while True:
-        r = requests.get(f"{B}/api/cloud/worker/next", headers=WK, timeout=20)
-        d = r.json()
+        d = requests.get(f"{B}/api/cloud/worker/next",
+                         headers=wk("/api/cloud/worker/next"), timeout=20).json()
         if not d.get("id"):
             return
-        requests.post(f"{B}/api/cloud/worker/result", headers=WK,
+        requests.post(f"{B}/api/cloud/worker/result",
+                      headers=wk("/api/cloud/worker/result"),
                       json={"id": d["id"], "status": "failed", "error": "drain"}, timeout=20)
 
 
@@ -32,10 +47,11 @@ def main() -> None:
     print("CORS", r.status_code, allow)
     assert allow in ("*", "https://josjshid99-ai-ugc-studio-web.static.hf.space")
 
-    # status de cola
+    # status de cola + latido del worker
     st = requests.get(f"{B}/api/cloud/status", timeout=20).json()
     print("STATUS", st)
     assert st["mode"] == "kaggle"
+    assert "worker" in st and st["worker"]["online"] is True
 
     # subir foto
     with open(f"{ROOT}\\assets\\influencers\\s0.jpg", "rb") as fh:
@@ -66,28 +82,38 @@ def main() -> None:
     print("JOB", j["status"], j.get("ext_id"))
     assert j["status"] == "pending"
 
-    # worker reclama
-    ext = requests.get(f"{B}/api/cloud/worker/next", headers=WK, timeout=30).json()
-    print("CLAIM", ext["id"], ext["kind"])
+    # worker reclama (firma Ed25519, como el kernel real)
+    ext = requests.get(f"{B}/api/cloud/worker/next",
+                       headers=wk("/api/cloud/worker/next"),
+                       params={"gpu": "TEST-GPU", "v": "test"}, timeout=30).json()
+    print("CLAIM", ext.get("id"), ext.get("kind"))
+    assert ext.get("id"), ext
     assert ext["kind"] == "flujo"
     assert ext["payload"]["audio_path"] == au["path"], ext["payload"]
     assert ext["payload"]["script"] == "Hola, esto es una prueba real."
 
-    # descarga de input con worker key
-    r = requests.get(f"{B}/api/cloud/worker/files", headers=WK,
+    st = requests.get(f"{B}/api/cloud/status", timeout=20).json()
+    print("WORKER", st["worker"])
+    assert st["worker"]["online"] is True and st["worker"]["gpu"] == "TEST-GPU"
+
+    # descarga de input con firma
+    r = requests.get(f"{B}/api/cloud/worker/files",
+                     headers=wk("/api/cloud/worker/files"),
                      params={"path": ext["payload"]["photo_path"]}, timeout=30)
     print("DL_INPUT", r.status_code, len(r.content))
     assert r.ok and len(r.content) > 1000
 
     # sube resultado (MP4 real ya generado localmente en pruebas anteriores)
     with open(f"{ROOT}\\exports\\anuncio_1794251176.mp4", "rb") as fh:
-        r = requests.post(f"{B}/api/cloud/worker/upload", headers=WK,
+        r = requests.post(f"{B}/api/cloud/worker/upload",
+                          headers=wk("/api/cloud/worker/upload"),
                           files={"file": ("anuncio.mp4", fh)}, timeout=120)
     print("UPLOAD", r.status_code, r.text[:120])
     assert r.ok
     result = r.json()["path"]
 
-    r = requests.post(f"{B}/api/cloud/worker/result", headers=WK,
+    r = requests.post(f"{B}/api/cloud/worker/result",
+                      headers=wk("/api/cloud/worker/result"),
                       json={"id": ext["id"], "status": "completed", "result_path": result}, timeout=20)
     print("RESULT", r.status_code)
     assert r.ok

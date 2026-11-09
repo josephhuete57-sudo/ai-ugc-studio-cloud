@@ -1,0 +1,10 @@
+{
+  "id": "josephfrancia25/ai-ugc-studio-diag",
+  "title": "AI UGC Studio diag",
+  "code_file": "kernel.py",
+  "kernel_type": "script",
+  "language": "python",
+  "enable_gpu": true,
+  "enable_internet": true,
+  "parameters": {}
+}

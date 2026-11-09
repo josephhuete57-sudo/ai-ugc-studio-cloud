@@ -42,6 +42,7 @@ def init_ext() -> None:
                     error TEXT DEFAULT '',
                     result_path TEXT DEFAULT '',
                     project_id INTEGER,
+                    retries INTEGER NOT NULL DEFAULT 0,
                     created_at REAL NOT NULL,
                     updated_at REAL NOT NULL
                 );
@@ -49,12 +50,57 @@ def init_ext() -> None:
             )
             conn.commit()
         try:
+            conn.execute("ALTER TABLE ext_jobs ADD COLUMN retries INTEGER NOT NULL DEFAULT 0")
+            conn.commit()
+        except Exception:
+            pass
+        try:
             conn.execute("ALTER TABLE jobs ADD COLUMN ext_ref TEXT")
             conn.commit()
         except Exception:
             pass
     finally:
         conn.close()
+
+
+def requeue_stale(max_age_sec: float = 2700, max_retries: int = 2) -> int:
+    """Devuelve a la cola trabajos 'processing' abandonados (worker caído).
+
+    Kaggle es por sesiones: si la sesión muere a mitad de un trabajo, el
+    trabajo quedaría colgado para siempre. Tras `max_age_sec` sin progreso
+    se reintenta (hasta `max_retries`); después se marca 'failed' para que
+    el usuario vea un error claro en vez de un spinner infinito.
+    """
+    init_ext()
+    conn = _conn()
+    try:
+        with _lock:
+            cutoff = _now() - max_age_sec
+            rows = conn.execute(
+                "SELECT id, retries FROM ext_jobs WHERE status='processing' AND updated_at<?",
+                (cutoff,),
+            ).fetchall()
+            requeued = 0
+            for row in rows:
+                if (row["retries"] or 0) < max_retries:
+                    conn.execute(
+                        "UPDATE ext_jobs SET status='pending', retries=retries+1, "
+                        "step='Reintentando (worker interrumpido)…', updated_at=? WHERE id=?",
+                        (_now(), row["id"]),
+                    )
+                    requeued += 1
+                else:
+                    conn.execute(
+                        "UPDATE ext_jobs SET status='failed', "
+                        "error='El worker GPU se interrumpió varias veces. Vuelve a generar.', "
+                        "updated_at=? WHERE id=?",
+                        (_now(), row["id"]),
+                    )
+            conn.commit()
+            return requeued
+    finally:
+        conn.close()
+
 
 
 def enqueue_ext(kind: str, payload: dict, project_id: int | None = None) -> str:
@@ -143,3 +189,28 @@ def progress_ext(ext_id: str, step: str, progress: float | None = None) -> None:
             conn.commit()
     finally:
         conn.close()
+
+
+# ---------- latido del worker (para mostrar estado en el dashboard) ----------
+
+_last_poll = {"ts": 0.0, "gpu": "", "version": ""}
+
+
+def touch_worker(gpu: str = "", version: str = "") -> None:
+    """Registra que el worker está vivo (llamado en cada sondeo)."""
+    _last_poll["ts"] = _now()
+    if gpu:
+        _last_poll["gpu"] = gpu[:120]
+    if version:
+        _last_poll["version"] = version[:40]
+
+
+def worker_last_seen() -> dict:
+    ts = _last_poll["ts"]
+    return {
+        "seconds_ago": None if not ts else round(_now() - ts, 1),
+        "gpu": _last_poll["gpu"],
+        "version": _last_poll["version"],
+        "online": bool(ts) and (_now() - ts) < 90,
+    }
+

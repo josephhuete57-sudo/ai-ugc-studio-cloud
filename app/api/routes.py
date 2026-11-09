@@ -698,14 +698,17 @@ def get_job(job_id: int):
 # ---------- worker remoto (Kaggle GPU) ----------
 
 @router.get("/cloud/worker/next")
-def worker_next(request: Request):
+def worker_next(request: Request, gpu: str = "", v: str = ""):
     if not _worker_key_ok(request):
         raise HTTPException(401, "Worker key inválida.")
+    remote_worker.touch_worker(gpu=gpu, version=v)
+    # Recupera trabajos de una sesión de Kaggle que murió a mitad.
+    remote_worker.requeue_stale()
     ext = remote_worker.claim_next("kaggle-gpu")
     if not ext:
         return {"status": "idle"}
     payload = ext["payload"]
-    base = f"http://{request.headers.get('host', '')}"
+    base = str(request.base_url).rstrip("/")
     return {
         "id": ext["id"], "kind": ext["kind"], "payload": {**payload, "_download_base": base},
     }
@@ -805,6 +808,7 @@ def cloud_status():
     return {
         "mode": settings.CLOUD_INFERENCE_MODE,
         "worker_configured": bool(settings.CLOUD_WORKER_KEY) or bool(_worker_pubkey()),
+        "worker": remote_worker.worker_last_seen(),
         "queue": counts,
     }
 

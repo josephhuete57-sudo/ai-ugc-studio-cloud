@@ -23,7 +23,9 @@ BACKEND = os.environ.get("BACKEND_URL", "").rstrip("/")
 WKEY = os.environ.get("WORKER_KEY", "")
 PRIV_HEX = os.environ.get("WORKER_PRIV_HEX", "")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
-MAX_RUNTIME_MIN = int(os.environ.get("MAX_RUNTIME_MIN", "55"))
+MAX_RUNTIME_MIN = int(os.environ.get("MAX_RUNTIME_MIN", "170"))
+# Pesos públicos alojados en HF (evita Google Drive y descargas frágiles).
+WEIGHTS_REPO = os.environ.get("WEIGHTS_REPO", "josjshid99/ai-ugc-studio-weights")
 WORK = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path(tempfile.gettempdir()) / "ugc_work"
 WORK.mkdir(parents=True, exist_ok=True)
 CACHE = WORK / "cache"
@@ -40,18 +42,50 @@ def _pip(*pkgs: str) -> None:
 
 
 def _ensure_deps() -> None:
+    """Instala lo que falta para LivePortrait + Wav2Lip + TTS + FFmpeg.
+
+    Kaggle ya trae torch/CUDA, cv2, skimage, albumentations, scipy, onnx,
+    imageio-ffmpeg y ffmpeg. Solo se instala lo ausente.
+    """
     missing = []
-    for mod, pkg in [("onnxruntime", "onnxruntime"), ("cv2", "opencv-python-headless"),
-                     ("huggingface_hub", "huggingface_hub"), ("requests", "requests"),
-                     ("edge_tts", "edge-tts"), ("scipy", "scipy"), ("librosa", "librosa==0.9.2"),
-                     ("cryptography", "cryptography"), ("torch", "torch")]:
+    for mod, pkg in [
+        ("onnxruntime", "onnxruntime-gpu"),
+        ("cv2", "opencv-python-headless"),
+        ("huggingface_hub", "huggingface_hub"),
+        ("requests", "requests"),
+        ("edge_tts", "edge-tts"),
+        ("scipy", "scipy"),
+        ("librosa", "librosa"),
+        ("soundfile", "soundfile"),
+        ("cryptography", "cryptography"),
+        ("torch", "torch"),
+        ("tyro", "tyro"),
+        ("pykalman", "pykalman"),
+        ("lmdb", "lmdb"),
+        ("ffmpeg", "ffmpeg-python"),
+        ("rich", "rich"),
+        ("imageio", "imageio"),
+        ("matplotlib", "matplotlib"),
+    ]:
         try:
             __import__(mod)
         except ImportError:
             missing.append(pkg)
     if missing:
         _log(f"Instalando deps: {missing}")
-        _pip(*missing)
+        try:
+            _pip(*missing)
+        except subprocess.CalledProcessError:
+            # onnxruntime-gpu puede no tener rueda para la versión de Python:
+            # se cae a la variante CPU (LivePortrait sigue funcionando en GPU con torch).
+            _log("Fallback: instalando deps sin onnxruntime-gpu")
+            _pip(*[p for p in missing if p != "onnxruntime-gpu"], "onnxruntime")
+    for mod in ("onnxruntime", "tyro", "pykalman", "lmdb", "librosa", "edge_tts"):
+        try:
+            __import__(mod)
+            _log(f"DEP OK {mod}")
+        except Exception as exc:
+            _log(f"DEP FALLA {mod}: {exc!r}")
 
 
 def _gpu() -> str:
@@ -139,24 +173,40 @@ def _clone(url: str, name: str) -> Path:
     return dest
 
 
-def _lp_weights() -> None:
+def _hf_get(filename: str, dest: Path, repo: str | None = None) -> Path:
+    """Descarga un archivo de HF (con caché) y lo copia al destino esperado."""
     from huggingface_hub import hf_hub_download
 
-    names = [
+    if dest.exists() and dest.stat().st_size > 1000:
+        return dest
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    got = hf_hub_download(repo_id=repo or WEIGHTS_REPO, filename=filename,
+                          token=HF_TOKEN or None)
+    shutil.copy2(got, str(dest))
+    return dest
+
+
+def _lp_weights() -> None:
+    repo_root = CACHE / "LivePortrait"
+    # Modelos base y retargeting: repo oficial de LivePortrait.
+    official = [
         "pretrained_weights/liveportrait/base_models/appearance_feature_extractor.pth",
         "pretrained_weights/liveportrait/base_models/motion_extractor.pth",
         "pretrained_weights/liveportrait/base_models/spade_generator.pth",
         "pretrained_weights/liveportrait/base_models/warping_module.pth",
         "pretrained_weights/liveportrait/retargeting_models/stitching_retargeting_module.pth",
     ]
-    for fname in names:
-        dest = CACHE / "LivePortrait" / fname
-        if dest.exists() and dest.stat().st_size > 1000:
-            continue
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        got = hf_hub_download(repo_id="KwaiVGI/LivePortrait", filename=fname,
-                              local_dir=str(CACHE / "LivePortrait"), token=HF_TOKEN or None)
-        shutil.copy2(got, str(dest))
+    for fname in official:
+        _hf_get(fname, repo_root / fname, repo="KwaiVGI/LivePortrait")
+    # Landmark + insightface buffalo_l: espejo propio (estable, sin Drive).
+    for fname in [
+        "liveportrait/landmark.onnx",
+        "insightface/models/buffalo_l/det_10g.onnx",
+        "insightface/models/buffalo_l/2d106det.onnx",
+    ]:
+        _hf_get(fname, repo_root / "pretrained_weights" / fname)
+    _log("Pesos LivePortrait + insightface listos")
+
 
 
 def _lp_animate(source: Path, driving: Path) -> Path:
@@ -167,64 +217,67 @@ def _lp_animate(source: Path, driving: Path) -> Path:
     on_gpu = _gpu() != "CPU"
     cmd = [sys.executable, str(repo / "inference.py"),
            "-s", str(source), "-d", str(driving), "-o", str(out_dir)]
-    cmd += ["--flag-use-half-precision"] if on_gpu else [
-        "--flag-force-cpu", "--no-flag-use-half-precision"]
-    subprocess.run(cmd, cwd=str(repo), check=True,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=1800,
-                   env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1"))
+    if on_gpu:
+        cmd += ["--flag-use-half-precision"]
+    else:
+        cmd += ["--flag-force-cpu", "--no-flag-use-half-precision", "--source-max-dim", "512"]
+    log = out_dir / "liveportrait.log"
+    with log.open("w", encoding="utf-8", errors="replace") as fh:
+        proc = subprocess.run(cmd, cwd=str(repo), stdout=fh, stderr=subprocess.STDOUT,
+                              timeout=3600,
+                              env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1"))
+    if proc.returncode != 0:
+        tail = log.read_text(encoding="utf-8", errors="replace")[-1800:]
+        raise RuntimeError(f"LivePortrait falló ({proc.returncode}): {tail}")
     mp4s = sorted(out_dir.rglob("*.mp4"), key=lambda p: p.stat().st_mtime)
     if not mp4s:
-        raise RuntimeError("LivePortrait sin MP4")
+        tail = log.read_text(encoding="utf-8", errors="replace")[-1800:]
+        raise RuntimeError(f"LivePortrait sin MP4: {tail}")
     return mp4s[-1]
 
 
+def _patch_w2l(repo: Path) -> None:
+    """Compatibilidad de Wav2Lip con librosa >= 0.10 (kwargs obligatorios)."""
+    audio = repo / "audio.py"
+    if not audio.exists():
+        return
+    src = audio.read_text(encoding="utf-8")
+    old = "return librosa.filters.mel(hp.sample_rate, hp.n_fft, n_mels=hp.num_mels,"
+    new = "return librosa.filters.mel(sr=hp.sample_rate, n_fft=hp.n_fft, n_mels=hp.num_mels,"
+    if old in src:
+        audio.write_text(src.replace(old, new), encoding="utf-8")
+        _log("audio.py de Wav2Lip parcheado para librosa nuevo")
+
+
 def _w2l_weights() -> str:
-    state = CACHE / "wav2lip_gan_state.pth"
-    if state.exists() and state.stat().st_size > 10_000_000:
-        return str(state)
-    src = CACHE / "wav2lip_gan.pth"
-    if not src.exists():
-        import requests
-
-        url = "https://drive.google.com/uc?export=download&id=15G3U08c8xsCkOqQxE38Z2XXDnPcOptNk"
-        r = requests.get(url, timeout=60, stream=True, headers={"User-Agent": "Mozilla/5.0"})
-        if r.headers.get("content-type", "").startswith("text/html"):
-            import re
-
-            fields = dict(re.findall(r'name="(id|export|confirm|uuid)" value="([^"]*)"', r.text))
-            action = f"https://drive.usercontent.google.com/download?" + "&".join(
-                f"{k}={v}" for k, v in fields.items())
-            r = requests.get(action, timeout=900, stream=True)
-        with src.open("wb") as fh:
-            for ch in r.iter_content(1024 * 1024):
-                fh.write(ch)
-    # s3fd
+    """Pesos de Wav2Lip + s3fd desde HF (el checkpoint ya está convertido)."""
     repo = _clone("https://github.com/Rudrabha/Wav2Lip.git", "Wav2Lip")
+    _patch_w2l(repo)
+    state = _hf_get("wav2lip_gan_state.pth", CACHE / "wav2lip_gan_state.pth")
     sfd = repo / "face_detection" / "detection" / "sfd" / "s3fd.pth"
-    if not sfd.exists():
-        import requests
-
-        sfd.write_bytes(requests.get(
-            "https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth",
-            timeout=600, stream=True).content)
-    import torch
-
-    m = torch.jit.load(str(src), map_location="cpu")
-    sd = m.state_dict()
-    torch.save({"state_dict": sd}, str(state), _use_new_zipfile_serialization=False)
+    if not (sfd.exists() and sfd.stat().st_size > 1_000_000):
+        _hf_get("s3fd.pth", sfd)
     return str(state)
+
 
 
 def _lipsync(face: Path, audio: Path) -> Path:
     repo = _clone("https://github.com/Rudrabha/Wav2Lip.git", "Wav2Lip")
     ckpt = _w2l_weights()
     out = WORK / f"lipsync_{int(time.time())}.mp4"
-    subprocess.run([sys.executable, str(repo / "inference.py"),
-                    "--checkpoint_path", ckpt, "--face", str(face), "--audio", str(audio),
-                    "--outfile", str(out), "--pads", "0", "10", "0", "0",
-                    "--wav2lip_batch_size", "16", "--face_det_batch_size", "1"],
-                   cwd=str(repo), check=True, stdout=subprocess.DEVNULL,
-                   stderr=subprocess.DEVNULL, timeout=1800)
+    log = WORK / f"lipsync_{int(time.time())}.log"
+    with log.open("w", encoding="utf-8", errors="replace") as fh:
+        proc = subprocess.run([sys.executable, str(repo / "inference.py"),
+                               "--checkpoint_path", ckpt, "--face", str(face),
+                               "--audio", str(audio), "--outfile", str(out),
+                               "--pads", "0", "10", "0", "0",
+                               "--wav2lip_batch_size", "16", "--face_det_batch_size", "1"],
+                              cwd=str(repo), stdout=fh, stderr=subprocess.STDOUT,
+                              timeout=3600,
+                              env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1"))
+    if proc.returncode != 0 or not out.exists():
+        tail = log.read_text(encoding="utf-8", errors="replace")[-1800:]
+        raise RuntimeError(f"Wav2Lip falló ({proc.returncode}): {tail}")
     return out
 
 
@@ -240,10 +293,17 @@ def _srt(text: str, audio: Path) -> Path:
         dur = 5.0
     parts = [p.strip() for p in text.replace("!", ".").replace("?", ".").split(".") if p.strip()]
     total = sum(len(p) for p in parts) or 1
+
+    def _ts(sec: float) -> str:
+        sec = max(0.0, sec)
+        h, rem = divmod(sec, 3600)
+        m, s = divmod(rem, 60)
+        return f"{int(h):02d}:{int(m):02d}:{s:06.3f}"
+
     lines, cur = [], 0.0
     for i, p in enumerate(parts, 1):
         span = dur * (len(p) / total)
-        lines.append(f"{i}\n00:00:{cur:06.3f} --> 00:00:{cur + span:06.3f}\n{p}\n")
+        lines.append(f"{i}\n{_ts(cur)} --> {_ts(cur + span)}\n{p}\n")
         cur += span
     out.write_text("\n".join(lines), encoding="utf-8")
     return out
@@ -277,7 +337,7 @@ def _edit(visual: Path, audio: Path, title: str, subs: Path | None, resolution: 
             for i, (a, b, txt) in enumerate(entries):
                 tf = WORK / f"sub{i}.txt"
                 tf.write_text(txt, encoding="utf-8")
-                filters.append(f"drawtext=fontfile='{font}':textfile='{tf.name}':fontsize=38:"
+                filters.append(f"drawtext=fontfile='{font}':textfile='{tf.as_posix()}':fontsize=38:"
                                f"fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:"
                                f"y=h-text_h-110:enable='between(t,{a},{b})'")
             subs_filter = ",".join(filters) + ","
@@ -285,7 +345,7 @@ def _edit(visual: Path, audio: Path, title: str, subs: Path | None, resolution: 
     if title and font:
         tf = WORK / "title.txt"
         tf.write_text(title[:60], encoding="utf-8")
-        title_filter = (f"drawtext=fontfile='{font}':textfile='{tf.name}':fontsize=44:"
+        title_filter = (f"drawtext=fontfile='{font}':textfile='{tf.as_posix()}':fontsize=44:"
                         f"fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:y=60,")
     dur_pr = subprocess.run(["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
                              "-of", "json", str(audio)], capture_output=True, text=True, timeout=60)
@@ -383,7 +443,9 @@ def main() -> None:
         pass
     while (time.time() - start) < MAX_RUNTIME_MIN * 60:
         try:
-            r = _http("GET", "/api/cloud/worker/next")
+            from urllib.parse import quote as _q
+
+            r = _http("GET", f"/api/cloud/worker/next?gpu={_q(_gpu())}&v=kaggle-1.0")
         except Exception as exc:
             _log(f"Poll error: {exc}; reintento en 30s")
             time.sleep(30)

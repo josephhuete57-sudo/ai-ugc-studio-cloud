@@ -20,6 +20,7 @@
     <button data-view="projects">Projects</button>
   </nav>
   <div class="engine-pill" id="enginePill">Motor: …</div>
+  <div class="engine-pill pill" id="workerPill" title="Estado del worker GPU de Kaggle">GPU: …</div>
   <div class="cloudbox" title="Modo cloud: pega la URL del backend y el token si lo hay">
     API cloud: <input id="cloudBase" size="26" placeholder="https://…">
     Token: <input id="cloudToken" size="10" placeholder="Bearer">
@@ -47,6 +48,7 @@ window.STUDIO_API_BASE = localStorage.getItem("studio_api_base") || "https://ai-
       <label>Resolución <select id="qRes"><option>720x1280</option><option>1080x1920</option></select></label>
       <button type="submit" class="big">GENERAR VIDEO (GPU CLOUD)</button>
       <span class="hint">Todo el procesamiento ocurre en la nube (worker GPU). Tu PC solo usa el navegador.</span>
+      <div class="hint" id="workerHint" style="margin-top:8px"></div>
     </form>
     <div id="qResult"></div>
   </div>
