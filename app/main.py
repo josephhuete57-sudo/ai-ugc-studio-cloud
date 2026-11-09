@@ -15,6 +15,9 @@ from app.api.routes import router
 from app.core import database
 from app.core.config import settings
 
+# Los logs/ no viajan en git (checkout en Render sin esa carpeta): crearlos
+# ANTES del FileHandler para no tumbar el arranque (exit 1 en Render).
+settings.LOGS_DIR.mkdir(parents=True, exist_ok=True)
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
