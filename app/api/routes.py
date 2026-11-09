@@ -831,6 +831,7 @@ def cloud_status():
     return {
         "mode": settings.CLOUD_INFERENCE_MODE,
         "worker_configured": bool(settings.CLOUD_WORKER_KEY) or bool(_worker_pubkey()),
+        "persistence": cloud_store.enabled(),
         "worker": remote_worker.worker_last_seen(),
         "queue": counts,
     }
