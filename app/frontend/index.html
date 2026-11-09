@@ -1,0 +1,217 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AI UGC STUDIO — Dashboard</title>
+<link rel="stylesheet" href="/frontend/css/style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="logo">▶</span> AI UGC STUDIO <small>CPU local</small></div>
+  <nav id="nav">
+    <button data-view="dashboard" class="active">Dashboard</button>
+    <button data-view="influencers">AI Influencers</button>
+    <button data-view="scripts">AI Script Writer</button>
+    <button data-view="voice">AI Voice</button>
+    <button data-view="animation">AI Animation</button>
+    <button data-view="lipsync">AI Lip Sync</button>
+    <button data-view="editor">AI Video Editor</button>
+    <button data-view="projects">Projects</button>
+  </nav>
+  <div class="engine-pill" id="enginePill">Motor: …</div>
+  <div class="cloudbox" title="Modo cloud: pega la URL del backend y el token si lo hay">
+    API cloud: <input id="cloudBase" size="26" placeholder="https://…">
+    Token: <input id="cloudToken" size="10" placeholder="Bearer">
+    <button id="btnSaveCloud" type="button">Conectar</button>
+  </div>
+</header>
+
+<script>
+window.STUDIO_API_BASE = localStorage.getItem("studio_api_base") || "";
+</script>
+
+<main>
+<!-- DASHBOARD -->
+<section id="view-dashboard" class="view active">
+  <h1>Dashboard <span class="muted" id="healthLine"></span></h1>
+  <div class="cards">
+    <div class="card"><div class="num" id="statProjects">0</div><div class="lbl">Proyectos totales</div></div>
+    <div class="card"><div class="num" id="statVideos">0</div><div class="lbl">Videos generados</div></div>
+    <div class="card"><div class="num" id="statPending">0</div><div class="lbl">Trabajos pendientes</div></div>
+    <div class="card"><div class="num" id="statInfluencers">0</div><div class="lbl">Influencers</div></div>
+  </div>
+  <h2>Estado de los motores de IA</h2>
+  <div class="cards" id="engineCards"></div>
+  <h2>Monitor de memoria (LOW_RAM_12GB)</h2>
+  <div class="panel" id="memPanel">
+    <div id="memAlert" class="hint">RAM: …</div>
+    <table class="tbl"><tbody id="memTable"></tbody></table>
+    <button type="button" id="btnCleanup">Limpiar temporales seguros</button>
+    <span class="hint" id="cleanupMsg"></span>
+  </div>
+  <h2>Últimos proyectos</h2>
+  <table class="tbl"><thead><tr><th>ID</th><th>Nombre</th><th>Producto</th><th>Estado</th><th>Video</th></tr></thead>
+  <tbody id="recentProjects"></tbody></table>
+  <h2>Trabajos recientes</h2>
+  <div id="recentJobs"></div>
+</section>
+
+<!-- INFLUENCERS -->
+<section id="view-influencers" class="view">
+  <h1>AI Influencers</h1>
+  <form id="formInfluencer" class="panel">
+    <label>Nombre del personaje <input id="infName" required maxlength="80"></label>
+    <label>Foto (JPG/PNG/WebP) <input type="file" id="infPhoto" accept=".jpg,.jpeg,.png,.webp" required></label>
+    <button type="submit">Subir y guardar personaje</button>
+    <span class="hint">La foto debe ser un retrato de frente para LivePortrait.</span>
+  </form>
+  <div class="grid" id="influencersGrid"></div>
+</section>
+
+<!-- SCRIPTS -->
+<section id="view-scripts" class="view">
+  <h1>AI Script Writer <small class="muted">ES · UGC</small></h1>
+  <form id="formScript" class="panel">
+    <label>Producto o servicio <input id="scriptProduct" required maxlength="200"></label>
+    <label>Campaña / beneficio <input id="scriptCampaign" maxlength="300" placeholder="Ej. protege del sol con acabado invisible"></label>
+    <label>Tono
+      <select id="scriptTone">
+        <option>conversacional</option><option>entusiasta</option><option>profesional</option><option>humorístico</option>
+      </select>
+    </label>
+    <button type="submit">Generar guiones</button>
+    <span class="hint" id="scriptNote"></span>
+  </form>
+  <div id="scriptVariants"></div>
+</section>
+
+<!-- VOICE -->
+<section id="view-voice" class="view">
+  <h1>AI Voice <small class="muted">Fish Audio</small></h1>
+  <div class="panel">
+    <div id="fishStatus"></div>
+    <button type="button" id="btnFishTest">Probar conexión Fish Audio</button>
+    <button type="button" id="btnFishVoices">Listar voces</button>
+    <ul id="fishVoices"></ul>
+  </div>
+  <form id="formVoice" class="panel">
+    <label>Proveedor de voz
+      <select id="voiceProvider"><option value="auto">Auto (Fish → local si no hay saldo)</option><option value="fish">Fish Audio (API)</option><option value="local">Local Windows SAPI (gratis)</option></select>
+    </label>
+    <label>Voz local (Windows, gratis) <select id="voiceLocal"><option value="">Automática (español)</option></select></label>
+    <label>Guion a narrar <textarea id="voiceText" rows="4" required></textarea></label>
+    <label>Reference ID (voz, opcional — si no se indica usa el de .env)
+      <input id="voiceRef" maxlength="120" placeholder="ID de voz de Fish Audio"></label>
+    <label>Formato
+      <select id="voiceFormat"><option>mp3</option><option>wav</option><option>opus</option></select>
+    </label>
+    <label>Velocidad <input type="range" id="voiceSpeed" min="0.7" max="1.4" step="0.05" value="1"> <span id="voiceSpeedVal">1.0</span></label>
+    <label>Proyecto (opcional) <input type="number" id="voiceProject" min="1" placeholder="ID"></label>
+    <button type="submit">Generar audio con Fish Audio</button>
+  </form>
+  <div id="voiceResult"></div>
+</section>
+
+<!-- ANIMATION -->
+<section id="view-animation" class="view">
+  <h1>AI Animation <small class="muted">LivePortrait · CPU</small></h1>
+  <form id="formAnimation" class="panel">
+    <label>Foto del influencer (archivo o ruta)
+      <input type="file" id="animPhoto" accept=".jpg,.jpeg,.png,.webp">
+      <input id="animPhotoPath" maxlength="500" placeholder="…o pega la ruta guardada del personaje">
+    </label>
+    <label>Vídeo de referencia de movimiento (MP4/MOV/WebM)
+      <input type="file" id="animDriving" accept=".mp4,.mov,.webm">
+      <input id="animDrivingPath" maxlength="500" placeholder="…o pega la ruta del vídeo">
+    </label>
+    <label>Proyecto (opcional) <input type="number" id="animProject" min="1"></label>
+    <button type="submit">Animar con LivePortrait (CPU)</button>
+    <span class="hint">En CPU puede tardar varios minutos según la duración del vídeo. La UI no se bloquea.</span>
+  </form>
+  <div id="animationJobs"></div>
+</section>
+
+<!-- LIP SYNC -->
+<section id="view-lipsync" class="view">
+  <h1>AI Lip Sync <small class="muted">Wav2Lip</small></h1>
+  <div class="panel" id="lipsyncStatus"></div>
+  <form id="formLip" class="panel">
+    <label>Vídeo o foto base (ruta) <input id="lipFace" required maxlength="500"></label>
+    <label>Audio de voz (ruta) <input id="lipAudio" required maxlength="500"></label>
+    <label>Proyecto (opcional) <input type="number" id="lipProject" min="1"></label>
+    <button type="submit">Sincronizar labios (Wav2Lip CPU)</button>
+  </form>
+  <div id="lipJobs"></div>
+  <div class="panel">
+    <p>Motor real: pesos oficiales de Wav2Lip convertidos a CPU (ver <code>tests/convert_w2l.py</code>).</p>
+    <p class="hint">La inferencia en CPU tarda ~1 min cada 4 s de audio. El lip-sync se ejecuta sobre el vídeo animado o una foto estática (<code>--static</code> automático con JPG).</p>
+  </div>
+</section>
+
+<!-- EDITOR -->
+<section id="view-editor" class="view">
+  <h1>AI Video Editor <small class="muted">FFmpeg · 720x1280 · H.264/AAC</small></h1>
+  <form id="formEditor" class="panel">
+    <label>Vídeo base o foto (ruta) <input id="edVisual" required maxlength="500" placeholder="Ruta del vídeo animado o foto"></label>
+    <label>Audio de voz (ruta, opcional) <input id="edAudio" maxlength="500"></label>
+    <label>Música de fondo (ruta, opcional) <input id="edMusic" maxlength="500"></label>
+    <label>Subtítulos .srt (ruta, opcional) <input id="edSubs" maxlength="500"></label>
+    <label>Título publicitario <input id="edTitle" maxlength="60"></label>
+    <label>Resolución
+      <select id="edRes"><option>720x1280</option><option>1080x1920</option></select>
+    </label>
+    <label>Recorte inicio (s) <input type="number" id="edTrimS" min="0" step="0.1" value="0"></label>
+    <label>Recorte fin (s, opcional) <input type="number" id="edTrimE" min="0" step="0.1" placeholder="fin del audio"></label>
+    <label>Volumen voz <input type="range" id="edVoiceVol" min="0" max="1.5" step="0.05" value="1"></label>
+    <label>Volumen música <input type="range" id="edMusicVol" min="0" max="1" step="0.05" value="0.25"></label>
+    <label><input type="checkbox" id="edZoom" checked> Zoom-out suave (Ken Burns)</label>
+    <label>Proyecto (opcional) <input type="number" id="edProject" min="1"></label>
+    <button type="submit">Renderizar anuncio MP4</button>
+  </form>
+  <form id="formPreview" class="panel">
+    <label>Vista previa desde foto (prueba rápida FFmpeg) <input id="pvPhoto" required maxlength="500"></label>
+    <button type="submit">Generar vista previa 6s</button>
+  </form>
+  <div id="editorJobs"></div>
+</section>
+
+<!-- PROJECTS -->
+<section id="view-projects" class="view">
+  <h1>Projects</h1>
+  <form id="formProject" class="panel">
+    <label>Nombre <input id="projName" required maxlength="120"></label>
+    <label>Producto <input id="projProduct" maxlength="200"></label>
+    <label>Influencer ID (opcional) <input type="number" id="projInfluencer" min="1"></label>
+    <label>Guion <textarea id="projScript" rows="4"></textarea></label>
+    <label>Voz Reference ID <input id="projVoice" maxlength="120"></label>
+    <button type="submit">Crear proyecto</button>
+  </form>
+  <div class="panel">
+    <h2>Flujo automático</h2>
+    <form id="formFlow" class="panel">
+      <label>ID proyecto <input type="number" id="flowProject" min="1" required></label>
+      <label>Foto influencer (ruta, opcional) <input id="flowPhoto" maxlength="500"></label>
+      <label>Vídeo referencia movimiento (ruta) <input id="flowDriving" required maxlength="500"></label>
+      <label>Título del anuncio <input id="flowTitle" maxlength="60"></label>
+      <label>Proveedor de voz
+        <select id="flowAudioProvider"><option value="auto">Auto (Fish → local)</option><option value="fish">Fish Audio</option><option value="local">Local Windows SAPI</option></select>
+      </label>
+      <label>Resolución
+        <select id="flowRes"><option>720x1280</option><option>1080x1920</option></select>
+      </label>
+      <label><input type="checkbox" id="flowLipsync"> Intentar Wav2Lip si está disponible</label>
+      <button type="submit" class="big">GENERAR MI ANUNCIO</button>
+      <span class="hint">Audio (Fish) → Animación (LivePortrait CPU) → Subtítulos → MP4 720x1280.
+        Las etapas ya completadas se reutilizan al reintentar.</span>
+    </form>
+  </div>
+  <table class="tbl"><thead><tr><th>ID</th><th>Nombre</th><th>Producto</th><th>Estado</th><th>Acciones</th></tr></thead>
+  <tbody id="projectsTable"></tbody></table>
+  <div id="jobPanel"></div>
+</section>
+</main>
+
+<script src="/frontend/js/app.js"></script>
+</body>
+</html>

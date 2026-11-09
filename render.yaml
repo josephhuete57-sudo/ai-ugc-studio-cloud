@@ -1,0 +1,23 @@
+# Render Blueprint - backend AI UGC STUDIO (plan free, sin tarjeta).
+# Conectar en dashboard: New Blueprint Instance -> este repo (o deploy vía API con render.yaml de respaldo).
+services:
+  - type: web
+    name: ai-ugc-studio-backend
+    runtime: python
+    region: oregon
+    plan: free
+    buildCommand: pip install -r app/requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: APP_PORT
+        value: "10000"
+      - key: PROFILE
+        value: LOW_RAM_12GB
+      - key: CLOUD_INFERENCE_MODE
+        value: kaggle
+      - key: CLOUD_WORKER_KEY
+        generateValue: true
+      - key: FISH_AUDIO_API_KEY
+        sync: false
+      - key: FISH_AUDIO_REFERENCE_ID
+        sync: false

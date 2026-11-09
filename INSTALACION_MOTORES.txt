@@ -1,0 +1,1005 @@
+﻿**********************
+Inicio de la transcripción de Windows PowerShell
+Hora de inicio: 20261109090934
+Nombre de usuario: DESKTOP-E3351MV\josep
+Usuario RunAs: DESKTOP-E3351MV\josep
+Nombre de la configuración: 
+Máquina: DESKTOP-E3351MV (Microsoft Windows NT 10.0.19045.0)
+Aplicación host: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Id. de proceso: 6092
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS C:\Windows\system32> function Run-Step($Name, $Action) {
+    Write-Host "`n========== $Name ==========" -ForegroundColor Cyan
+    try { & $Action }
+    catch { Write-Host "ERROR: $_" -ForegroundColor Yellow }
+}
+PS C:\Windows\system32> # Git
+PS C:\Windows\system32> $Git = Get-Command git -ErrorAction SilentlyContinue
+PS C:\Windows\system32> if (!$Git) {
+    winget install --id Git.Git -e --accept-package-agreements --accept-source-agreements
+    $env:Path += ";C:\Program Files\Git\cmd"
+}
+PS C:\Windows\system32> if (!(Get-Command git -ErrorAction SilentlyContinue)) {
+    Write-Host "Git no disponible. Se detiene la descarga."
+    Stop-Transcript
+    exit
+}
+PS C:\Windows\system32> # Python 3.10 aislado para LivePortrait
+PS C:\Windows\system32> if (!(py -0p 2>&1 | Select-String "3.10")) {
+    winget install -e --id Python.Python.3.10 --accept-package-agreements --accept-source-agreements
+}
+Encontrado Python 3.10 [Python.Python.3.10] Versión 3.10.11
+El propietario de esta aplicación le concede una licencia.
+Microsoft no es responsable, ni tampoco concede ninguna licencia de paquetes de terceros.
+Descargando https://www.python.org/ftp/python/3.10.11/python-3.10.11-amd64.exe
+  ██████████████████████████████  27.6 MB / 27.6 MB
+El hash del instalador se verificó correctamente
+Iniciando instalación de paquete...
+Instalado correctamente
+PS C:\Windows\system32> $Py310 = (py -3.10 -c "import sys; print(sys.executable)" 2>$null)
+PS C:\Windows\system32> if (!$Py310) { Write-Host "No se encontró Python 3.10." }
+PS C:\Windows\system32> # Descargar los cinco motores
+PS C:\Windows\system32> $Repos = @{
+    LivePortrait = "https://github.com/KlingAIResearch/LivePortrait.git"
+    SadTalker = "https://github.com/OpenTalker/SadTalker.git"
+    Wav2Lip = "https://github.com/Rudrabha/Wav2Lip.git"
+    MuseTalk = "https://github.com/TMElyralab/MuseTalk.git"
+    ComfyUI = "https://github.com/comfyanonymous/ComfyUI.git"
+}
+PS C:\Windows\system32> foreach ($Name in $Repos.Keys) {
+    $Dest = Join-Path $Root $Name
+    if (!(Test-Path (Join-Path $Dest ".git"))) {
+        if (!(Test-Path $Dest)) {
+            git clone --depth 1 $Repos[$Name] $Dest
+        } else {
+            Write-Host "$Name ya tiene una carpeta; no se sobrescribe."
+        }
+    } else {
+        Write-Host "$Name ya descargado."
+    }
+}
+Cloning into 'C:\AI_UGC_STUDIO\LivePortrait'...
+remote: Enumerating objects: 245, done.
+remote: Counting objects: 100% (245/245), done.
+remote: Compressing objects: 100% (226/226), done.
+remote: Total 245 (delta 16), reused 177 (delta 13), pack-reused 0 (from 0)
+Receiving objects: 100% (245/245), 36.64 MiB | 2.97 MiB/s, done.
+Resolving deltas: 100% (16/16), done.
+Cloning into 'C:\AI_UGC_STUDIO\ComfyUI'...
+remote: Enumerating objects: 1501, done.
+remote: Counting objects: 100% (1501/1501), done.
+remote: Compressing objects: 100% (1300/1300), done.
+remote: Total 1501 (delta 158), reused 1129 (delta 152), pack-reused 0 (from 0)
+Receiving objects: 100% (1501/1501), 12.54 MiB | 3.32 MiB/s, done.
+Resolving deltas: 100% (158/158), done.
+Updating files: 100% (1340/1340), done.
+Cloning into 'C:\AI_UGC_STUDIO\SadTalker'...
+remote: Enumerating objects: 220, done.
+remote: Counting objects: 100% (220/220), done.
+remote: Compressing objects: 100% (201/201), done.
+remote: Total 220 (delta 17), reused 218 (delta 17), pack-reused 0 (from 0)
+Receiving objects: 100% (220/220), 67.32 MiB | 3.32 MiB/s, done.
+Resolving deltas: 100% (17/17), done.
+Cloning into 'C:\AI_UGC_STUDIO\Wav2Lip'...
+remote: Enumerating objects: 57, done.
+remote: Counting objects: 100% (57/57), done.
+remote: Compressing objects: 100% (50/50), done.
+remote: Total 57 (delta 3), reused 39 (delta 1), pack-reused 0 (from 0)
+Receiving objects: 100% (57/57), 442.23 KiB | 757.00 KiB/s, done.
+Resolving deltas: 100% (3/3), done.
+Cloning into 'C:\AI_UGC_STUDIO\MuseTalk'...
+remote: Enumerating objects: 133, done.
+remote: Counting objects: 100% (133/133), done.
+remote: Compressing objects: 100% (120/120), done.
+remote: Total 133 (delta 3), reused 57 (delta 2), pack-reused 0 (from 0)
+Receiving objects: 100% (133/133), 14.48 MiB | 2.41 MiB/s, done.
+Resolving deltas: 100% (3/3), done.
+PS C:\Windows\system32> # LivePortrait: entorno independiente y CPU
+PS C:\Windows\system32> $LP = Join-Path $Root "LivePortrait"
+PS C:\Windows\system32> if ($Py310 -and (Test-Path (Join-Path $LP "requirements.txt"))) {
+    if (!(Test-Path (Join-Path $LP ".venv\Scripts\python.exe"))) {
+        & $Py310 -m venv (Join-Path $LP ".venv")
+    }
+    $LPpy = Join-Path $LP ".venv\Scripts\python.exe"
+    & $LPpy -m pip install --upgrade pip
+    & $LPpy -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+    & $LPpy -m pip install -r (Join-Path $LP "requirements.txt")
+    Write-Host "LivePortrait: instalación de dependencias terminada."
+}
+
+Requirement already satisfied: pip in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (23.0.1)
+Collecting pip
+  Downloading pip-26.3-py3-none-any.whl (2.0 MB)
+     ---------------------------------------- 2.0/2.0 MB 4.0 MB/s eta 0:00:00
+Installing collected packages: pip
+  Attempting uninstall: pip
+    Found existing installation: pip 23.0.1
+    Uninstalling pip-23.0.1:
+      Successfully uninstalled pip-23.0.1
+Successfully installed pip-26.3
+Looking in indexes: https://download.pytorch.org/whl/cpu
+Collecting torch
+  Downloading torch-2.14.1%2Bcpu-cp310-cp310-win_amd64.whl.metadata (38 kB)
+Collecting torchvision
+  Downloading torchvision-0.29.2%2Bcpu-py3-none-win_amd64.whl.metadata (5.8 kB)
+Collecting filelock (from torch)
+  Downloading filelock-4.1.0-py3-none-any.whl.metadata (2.0 kB)
+Collecting typing-extensions>=4.10.0 (from torch)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting setuptools>=77.0.3 (from torch)
+  Downloading setuptools-78.1.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting sympy>=1.13.3 (from torch)
+  Using cached sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting networkx>=2.5.1 (from torch)
+  Downloading networkx-3.4.2-py3-none-any.whl.metadata (6.3 kB)
+Collecting jinja2 (from torch)
+  Downloading jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting fsspec>=0.8.5 (from torch)
+  Using cached fsspec-2026.9.0-py3-none-any.whl.metadata (10 kB)
+Collecting numpy (from torchvision)
+  Downloading numpy-2.2.6-cp310-cp310-win_amd64.whl.metadata (60 kB)
+Collecting pillow!=8.3.*,>=5.3.0 (from torchvision)
+  Downloading pillow-12.3.0-cp310-cp310-win_amd64.whl.metadata (9.3 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch)
+  Using cached mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2->torch)
+  Downloading markupsafe-3.0.3-cp310-cp310-win_amd64.whl.metadata (2.8 kB)
+Downloading torch-2.14.1%2Bcpu-cp310-cp310-win_amd64.whl (124.0 MB)
+   ---------------------------------------- 124.0/124.0 MB 3.5 MB/s  0:00:35
+Downloading torchvision-0.29.2%2Bcpu-py3-none-win_amd64.whl (1.4 MB)
+   ---------------------------------------- 1.4/1.4 MB 3.4 MB/s  0:00:00
+Using cached fsspec-2026.9.0-py3-none-any.whl (221 kB)
+Downloading networkx-3.4.2-py3-none-any.whl (1.7 MB)
+   ---------------------------------------- 1.7/1.7 MB 4.7 MB/s  0:00:00
+Downloading pillow-12.3.0-cp310-cp310-win_amd64.whl (7.2 MB)
+   ---------------------------------------- 7.2/7.2 MB 3.7 MB/s  0:00:01
+Downloading setuptools-78.1.0-py3-none-any.whl (1.3 MB)
+   ---------------------------------------- 1.3/1.3 MB 4.5 MB/s  0:00:00
+Using cached sympy-1.14.0-py3-none-any.whl (6.3 MB)
+Using cached mpmath-1.3.0-py3-none-any.whl (536 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading filelock-4.1.0-py3-none-any.whl (133 kB)
+Downloading jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading markupsafe-3.0.3-cp310-cp310-win_amd64.whl (15 kB)
+Downloading numpy-2.2.6-cp310-cp310-win_amd64.whl (12.9 MB)
+   ---------------------------------------- 12.9/12.9 MB 3.7 MB/s  0:00:03
+Installing collected packages: mpmath, typing-extensions, sympy, setuptools, pillow, numpy, networkx, MarkupSafe, fsspec
+, filelock, jinja2, torch, torchvision
+  Attempting uninstall: setuptools
+    Found existing installation: setuptools 65.5.0
+    Uninstalling setuptools-65.5.0:
+      Successfully uninstalled setuptools-65.5.0
+Successfully installed MarkupSafe-3.0.3 filelock-4.1.0 fsspec-2026.9.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.4.2 numpy-2.
+2.6 pillow-12.3.0 setuptools-78.1.0 sympy-1.14.0 torch-2.14.1+cpu torchvision-0.29.2+cpu typing-extensions-4.16.0
+Collecting numpy==1.26.4 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 1))
+  Downloading numpy-1.26.4-cp310-cp310-win_amd64.whl.metadata (61 kB)
+Collecting pyyaml==6.0.1 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 2))
+  Downloading PyYAML-6.0.1-cp310-cp310-win_amd64.whl.metadata (2.1 kB)
+Collecting opencv-python==4.10.0.84 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 3))
+  Downloading opencv_python-4.10.0.84-cp37-abi3-win_amd64.whl.metadata (20 kB)
+Collecting scipy==1.13.1 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 4))
+  Downloading scipy-1.13.1-cp310-cp310-win_amd64.whl.metadata (60 kB)
+Collecting imageio==2.34.2 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 5))
+  Downloading imageio-2.34.2-py3-none-any.whl.metadata (4.9 kB)
+Collecting lmdb==1.4.1 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 6))
+  Downloading lmdb-1.4.1-cp310-cp310-win_amd64.whl.metadata (1.2 kB)
+Collecting tqdm==4.66.4 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 7))
+  Downloading tqdm-4.66.4-py3-none-any.whl.metadata (57 kB)
+Collecting rich==13.7.1 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 8))
+  Downloading rich-13.7.1-py3-none-any.whl.metadata (18 kB)
+Collecting ffmpeg-python==0.2.0 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 9))
+  Downloading ffmpeg_python-0.2.0-py3-none-any.whl.metadata (1.7 kB)
+Collecting onnx==1.16.1 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 10))
+  Downloading onnx-1.16.1-cp310-cp310-win_amd64.whl.metadata (16 kB)
+Collecting scikit-image==0.24.0 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 11))
+  Downloading scikit_image-0.24.0-cp310-cp310-win_amd64.whl.metadata (14 kB)
+Collecting albumentations==1.4.10 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 12))
+  Downloading albumentations-1.4.10-py3-none-any.whl.metadata (38 kB)
+Collecting matplotlib==3.9.0 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 13))
+  Downloading matplotlib-3.9.0-cp310-cp310-win_amd64.whl.metadata (11 kB)
+Collecting imageio-ffmpeg==0.5.1 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 14))
+  Downloading imageio_ffmpeg-0.5.1-py3-none-win_amd64.whl.metadata (1.6 kB)
+Collecting tyro==0.8.5 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 15))
+  Downloading tyro-0.8.5-py3-none-any.whl.metadata (8.2 kB)
+Collecting gradio==5.1.0 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading gradio-5.1.0-py3-none-any.whl.metadata (15 kB)
+Collecting pykalman==0.9.7 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 17))
+  Downloading pykalman-0.9.7-py2.py3-none-any.whl.metadata (5.5 kB)
+Requirement already satisfied: pillow>=10.2.0 in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from -r C:\AI_UG
+C_STUDIO\LivePortrait\requirements_base.txt (line 18)) (12.3.0)
+Collecting onnxruntime-gpu==1.18.0 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 3))
+  Downloading onnxruntime_gpu-1.18.0-cp310-cp310-win_amd64.whl.metadata (4.4 kB)
+Collecting transformers==4.38.0 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 4))
+  Downloading transformers-4.38.0-py3-none-any.whl.metadata (131 kB)
+Collecting colorama (from tqdm==4.66.4->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 7))
+  Using cached colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+Collecting markdown-it-py>=2.2.0 (from rich==13.7.1->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 8))
+  Using cached markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting pygments<3.0.0,>=2.13.0 (from rich==13.7.1->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 8))
+  Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting future (from ffmpeg-python==0.2.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 9))
+  Downloading future-1.0.0-py3-none-any.whl.metadata (4.0 kB)
+Collecting protobuf>=3.20.2 (from onnx==1.16.1->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 10))
+  Downloading protobuf-7.36.2-cp310-abi3-win_amd64.whl.metadata (595 bytes)
+Requirement already satisfied: networkx>=2.8 in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from scikit-image
+==0.24.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 11)) (3.4.2)
+Collecting tifffile>=2022.8.12 (from scikit-image==0.24.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line
+11))
+  Downloading tifffile-2025.5.10-py3-none-any.whl.metadata (31 kB)
+Collecting packaging>=21 (from scikit-image==0.24.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 11))
+  Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting lazy-loader>=0.4 (from scikit-image==0.24.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 11)
+)
+  Using cached lazy_loader-0.6-py3-none-any.whl.metadata (6.0 kB)
+Requirement already satisfied: typing-extensions>=4.9.0 in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from a
+lbumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 12)) (4.16.0)
+Collecting scikit-learn>=1.3.2 (from albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (lin
+e 12))
+  Downloading scikit_learn-1.7.2-cp310-cp310-win_amd64.whl.metadata (11 kB)
+Collecting pydantic>=2.7.0 (from albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 12
+))
+  Using cached pydantic-2.14.3-py3-none-any.whl.metadata (141 kB)
+Collecting albucore>=0.0.11 (from albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 1
+2))
+  Downloading albucore-0.2.20-py3-none-any.whl.metadata (20 kB)
+Collecting opencv-python-headless>=4.9.0.80 (from albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_
+base.txt (line 12))
+  Using cached opencv_python_headless-5.0.0.93-cp37-abi3-win_amd64.whl.metadata (20 kB)
+Collecting contourpy>=1.0.1 (from matplotlib==3.9.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 13))
+  Downloading contourpy-1.3.2-cp310-cp310-win_amd64.whl.metadata (5.5 kB)
+Collecting cycler>=0.10 (from matplotlib==3.9.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 13))
+  Downloading cycler-0.12.1-py3-none-any.whl.metadata (3.8 kB)
+Collecting fonttools>=4.22.0 (from matplotlib==3.9.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 13))
+  Downloading fonttools-4.65.0-cp310-cp310-win_amd64.whl.metadata (127 kB)
+Collecting kiwisolver>=1.3.1 (from matplotlib==3.9.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 13))
+  Downloading kiwisolver-1.5.1-cp310-cp310-win_amd64.whl.metadata (5.2 kB)
+Collecting pyparsing>=2.3.1 (from matplotlib==3.9.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 13))
+  Using cached pyparsing-3.3.3-py3-none-any.whl.metadata (5.9 kB)
+Collecting python-dateutil>=2.7 (from matplotlib==3.9.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 13
+))
+  Downloading python_dateutil-3.0.0-py2.py3-none-any.whl.metadata (8.2 kB)
+Requirement already satisfied: setuptools in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from imageio-ffmpeg=
+=0.5.1->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 14)) (78.1.0)
+Collecting docstring-parser>=0.16 (from tyro==0.8.5->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 15))
+  Downloading docstring_parser-0.18.0-py3-none-any.whl.metadata (3.5 kB)
+Collecting shtab>=1.5.6 (from tyro==0.8.5->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 15))
+  Downloading shtab-1.13.0-py3-none-any.whl.metadata (7.6 kB)
+Collecting aiofiles<24.0,>=22.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading aiofiles-23.2.1-py3-none-any.whl.metadata (9.7 kB)
+Collecting anyio<5.0,>=3.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Using cached anyio-4.16.0-py3-none-any.whl.metadata (4.7 kB)
+Collecting fastapi<1.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading fastapi-0.162.2-py3-none-any.whl.metadata (27 kB)
+Collecting ffmpy (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading ffmpy-1.0.0-py3-none-any.whl.metadata (3.0 kB)
+Collecting gradio-client==1.4.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading gradio_client-1.4.0-py3-none-any.whl.metadata (7.1 kB)
+Collecting httpx>=0.24.1 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting huggingface-hub>=0.25.1 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16)
+)
+  Using cached huggingface_hub-2.4.0-py3-none-any.whl.metadata (16 kB)
+Requirement already satisfied: jinja2<4.0 in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from gradio==5.1.0->
+-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16)) (3.1.6)
+Collecting markupsafe~=2.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading MarkupSafe-2.1.5-cp310-cp310-win_amd64.whl.metadata (3.1 kB)
+Collecting orjson~=3.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading orjson-3.13.0-cp310-cp310-win_amd64.whl.metadata (43 kB)
+Collecting pandas<3.0,>=1.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading pandas-2.3.3-cp310-cp310-win_amd64.whl.metadata (19 kB)
+Collecting pillow>=10.2.0 (from -r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 18))
+  Downloading pillow-10.4.0-cp310-cp310-win_amd64.whl.metadata (9.3 kB)
+Collecting pydub (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading pydub-0.25.1-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting python-multipart>=0.0.9 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16)
+)
+  Downloading python_multipart-0.0.32-py3-none-any.whl.metadata (2.1 kB)
+Collecting ruff>=0.2.2 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading ruff-0.17.4-py3-none-win_amd64.whl.metadata (21 kB)
+Collecting semantic-version~=2.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading semantic_version-2.10.0-py2.py3-none-any.whl.metadata (9.7 kB)
+Collecting tomlkit==0.12.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading tomlkit-0.12.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting typer<1.0,>=0.12 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading typer-0.28.0-py3-none-any.whl.metadata (16 kB)
+Collecting uvicorn>=0.14.0 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Using cached uvicorn-0.54.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting coloredlogs (from onnxruntime-gpu==1.18.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 3))
+  Downloading coloredlogs-15.0.1-py2.py3-none-any.whl.metadata (12 kB)
+Collecting flatbuffers (from onnxruntime-gpu==1.18.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 3))
+  Using cached flatbuffers-25.12.19-py2.py3-none-any.whl.metadata (1.0 kB)
+Requirement already satisfied: sympy in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from onnxruntime-gpu==1.1
+8.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 3)) (1.14.0)
+Requirement already satisfied: filelock in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from transformers==4.3
+8.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 4)) (4.1.0)
+Collecting huggingface-hub>=0.25.1 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16)
+)
+  Downloading huggingface_hub-0.36.2-py3-none-any.whl.metadata (15 kB)
+Collecting regex!=2019.12.17 (from transformers==4.38.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 4))
+  Downloading regex-2026.9.29-cp310-cp310-win_amd64.whl.metadata (41 kB)
+Collecting requests (from transformers==4.38.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 4))
+  Using cached requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting tokenizers<0.19,>=0.14 (from transformers==4.38.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 4)
+)
+  Downloading tokenizers-0.15.2-cp310-none-win_amd64.whl.metadata (6.8 kB)
+Collecting safetensors>=0.4.1 (from transformers==4.38.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 4))
+  Using cached safetensors-0.8.0-cp310-abi3-win_amd64.whl.metadata (4.2 kB)
+Requirement already satisfied: fsspec in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from gradio-client==1.4.
+0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16)) (2026.9.0)
+Collecting websockets<13.0,>=10.0 (from gradio-client==1.4.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requiremen
+ts_base.txt (line 16))
+  Downloading websockets-12.0-cp310-cp310-win_amd64.whl.metadata (6.8 kB)
+Collecting exceptiongroup>=1.0.2 (from anyio<5.0,>=3.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_bas
+e.txt (line 16))
+  Downloading exceptiongroup-1.3.1-py3-none-any.whl.metadata (6.7 kB)
+Collecting idna>=2.8 (from anyio<5.0,>=3.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line
+16))
+  Using cached idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting starlette>=0.46.0 (from fastapi<1.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (l
+ine 16))
+  Downloading starlette-1.7.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting typing-inspection>=0.4.2 (from fastapi<1.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base
+.txt (line 16))
+  Using cached typing_inspection-0.4.5-py3-none-any.whl.metadata (2.6 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi<1.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt
+ (line 16))
+  Using cached annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+Collecting opentelemetry-api>=1.44.0 (from fastapi<1.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_bas
+e.txt (line 16))
+  Using cached opentelemetry_api-1.45.2-py3-none-any.whl.metadata (1.4 kB)
+Collecting pytz>=2020.1 (from pandas<3.0,>=1.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (l
+ine 16))
+  Downloading pytz-2026.6-py2.py3-none-any.whl.metadata (22 kB)
+Collecting tzdata>=2022.7 (from pandas<3.0,>=1.0->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt
+(line 16))
+  Downloading tzdata-2026.6-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting shellingham>=1.3.0 (from typer<1.0,>=0.12->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.
+txt (line 16))
+  Using cached shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting typer<1.0,>=0.12 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Using cached typer-0.27.3-py3-none-any.whl.metadata (16 kB)
+INFO: pip is looking at multiple versions of typer to determine which version is compatible with other requirements. Thi
+s could take a while.
+  Downloading typer-0.27.2-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.27.1-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.27.0-py3-none-any.whl.metadata (15 kB)
+  Downloading typer-0.26.8-py3-none-any.whl.metadata (15 kB)
+  Downloading typer-0.26.7-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.26.6-py3-none-any.whl.metadata (16 kB)
+INFO: pip is still looking at multiple versions of typer to determine which version is compatible with other requirement
+s. This could take a while.
+  Downloading typer-0.26.5-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.26.4-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.26.3-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.26.2-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.26.1-py3-none-any.whl.metadata (16 kB)
+INFO: This is taking longer than usual. You might need to provide the dependency resolver with stricter constraints to r
+educe runtime. See https://pip.pypa.io/warnings/backtracking for guidance. If you want to abort this run, press Ctrl + C
+.
+  Downloading typer-0.26.0-py3-none-any.whl.metadata (16 kB)
+  Downloading typer-0.25.1-py3-none-any.whl.metadata (15 kB)
+Collecting click>=8.2.1 (from typer<1.0,>=0.12->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (l
+ine 16))
+  Downloading click-8.5.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting typer<1.0,>=0.12 (from gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+  Downloading typer-0.25.0-py3-none-any.whl.metadata (15 kB)
+  Downloading typer-0.24.2-py3-none-any.whl.metadata (15 kB)
+Collecting numkong>=7.8.0 (from albucore>=0.0.11->albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_
+base.txt (line 12))
+  Downloading numkong-7.8.7-cp310-cp310-win_amd64.whl.metadata (88 kB)
+Collecting stringzilla>=5.1.2 (from albucore>=0.0.11->albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requireme
+nts_base.txt (line 12))
+  Downloading stringzilla-5.3.2-cp310-cp310-win_amd64.whl.metadata (57 kB)
+Collecting certifi (from httpx>=0.24.1->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (line 16))
+
+  Using cached certifi-2026.10.23-py3-none-any.whl.metadata (2.5 kB)
+Collecting httpcore==1.* (from httpx>=0.24.1->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt (lin
+e 16))
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.24.1->gradio==5.1.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_ba
+se.txt (line 16))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich==13.7.1->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.txt
+(line 8))
+  Using cached mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting opencv-python-headless>=4.9.0.80 (from albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_
+base.txt (line 12))
+  Downloading opencv_python_headless-4.14.0.94-cp37-abi3-win_amd64.whl.metadata (20 kB)
+INFO: pip is looking at multiple versions of opencv-python-headless to determine which version is compatible with other
+requirements. This could take a while.
+  Downloading opencv_python_headless-4.13.0.92-cp37-abi3-win_amd64.whl.metadata (20 kB)
+  Downloading opencv_python_headless-4.13.0.90-cp37-abi3-win_amd64.whl.metadata (20 kB)
+  Downloading opencv_python_headless-4.12.0.88-cp37-abi3-win_amd64.whl.metadata (20 kB)
+  Downloading opencv_python_headless-4.11.0.86-cp37-abi3-win_amd64.whl.metadata (20 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.7.0->albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requir
+ements_base.txt (line 12))
+  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.50.4 (from pydantic>=2.7.0->albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\require
+ments_base.txt (line 12))
+  Downloading pydantic_core-2.50.4-cp310-cp310-win_amd64.whl.metadata (6.7 kB)
+Collecting six>=1.6 (from python-dateutil>=2.7->matplotlib==3.9.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements_base.tx
+t (line 13))
+  Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting joblib>=1.2.0 (from scikit-learn>=1.3.2->albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requirement
+s_base.txt (line 12))
+  Using cached joblib-1.6.0-py3-none-any.whl.metadata (6.5 kB)
+Collecting threadpoolctl>=3.1.0 (from scikit-learn>=1.3.2->albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePortrait\requ
+irements_base.txt (line 12))
+  Using cached threadpoolctl-3.8.0-py3-none-any.whl.metadata (29 kB)
+Collecting cloudpickle>=3.0 (from joblib>=1.2.0->scikit-learn>=1.3.2->albumentations==1.4.10->-r C:\AI_UGC_STUDIO\LivePo
+rtrait\requirements_base.txt (line 12))
+  Using cached cloudpickle-3.1.2-py3-none-any.whl.metadata (7.1 kB)
+Collecting humanfriendly>=9.1 (from coloredlogs->onnxruntime-gpu==1.18.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.
+txt (line 3))
+  Downloading humanfriendly-10.0-py2.py3-none-any.whl.metadata (9.2 kB)
+Collecting pyreadline3 (from humanfriendly>=9.1->coloredlogs->onnxruntime-gpu==1.18.0->-r C:\AI_UGC_STUDIO\LivePortrait\
+requirements.txt (line 3))
+  Downloading pyreadline3-3.5.6-py3-none-any.whl.metadata (4.7 kB)
+Collecting charset_normalizer<4,>=2 (from requests->transformers==4.38.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.
+txt (line 4))
+  Downloading charset_normalizer-3.5.2-cp310-cp310-win_amd64.whl.metadata (47 kB)
+Collecting urllib3<3,>=1.26 (from requests->transformers==4.38.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (lin
+e 4))
+  Using cached urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in c:\ai_ugc_studio\liveportrait\.venv\lib\site-packages (from sympy->
+onnxruntime-gpu==1.18.0->-r C:\AI_UGC_STUDIO\LivePortrait\requirements.txt (line 3)) (1.3.0)
+Downloading numpy-1.26.4-cp310-cp310-win_amd64.whl (15.8 MB)
+   ---------------------------------------- 15.8/15.8 MB 3.7 MB/s  0:00:04
+Downloading PyYAML-6.0.1-cp310-cp310-win_amd64.whl (145 kB)
+Downloading opencv_python-4.10.0.84-cp37-abi3-win_amd64.whl (38.8 MB)
+   ---------------------------------------- 38.8/38.8 MB 3.6 MB/s  0:00:10
+Downloading scipy-1.13.1-cp310-cp310-win_amd64.whl (46.2 MB)
+   ---------------------------------------- 46.2/46.2 MB 3.5 MB/s  0:00:13
+Downloading imageio-2.34.2-py3-none-any.whl (313 kB)
+Downloading lmdb-1.4.1-cp310-cp310-win_amd64.whl (100 kB)
+Downloading tqdm-4.66.4-py3-none-any.whl (78 kB)
+Downloading rich-13.7.1-py3-none-any.whl (240 kB)
+Downloading ffmpeg_python-0.2.0-py3-none-any.whl (25 kB)
+Downloading onnx-1.16.1-cp310-cp310-win_amd64.whl (14.4 MB)
+   ---------------------------------------- 14.4/14.4 MB 3.2 MB/s  0:00:04
+Downloading scikit_image-0.24.0-cp310-cp310-win_amd64.whl (12.9 MB)
+   ---------------------------------------- 12.9/12.9 MB 3.2 MB/s  0:00:03
+Downloading albumentations-1.4.10-py3-none-any.whl (161 kB)
+Downloading matplotlib-3.9.0-cp310-cp310-win_amd64.whl (8.0 MB)
+   ---------------------------------------- 8.0/8.0 MB 3.7 MB/s  0:00:02
+Downloading imageio_ffmpeg-0.5.1-py3-none-win_amd64.whl (22.6 MB)
+   ---------------------------------------- 22.6/22.6 MB 3.6 MB/s  0:00:06
+Downloading tyro-0.8.5-py3-none-any.whl (103 kB)
+Downloading gradio-5.1.0-py3-none-any.whl (42.3 MB)
+   ---------------------------------------- 42.3/42.3 MB 3.6 MB/s  0:00:11
+Downloading pykalman-0.9.7-py2.py3-none-any.whl (251 kB)
+Downloading onnxruntime_gpu-1.18.0-cp310-cp310-win_amd64.whl (157.7 MB)
+   ---------------------------------------- 157.7/157.7 MB 3.5 MB/s  0:00:45
+Downloading transformers-4.38.0-py3-none-any.whl (8.5 MB)
+   ---------------------------------------- 8.5/8.5 MB 3.0 MB/s  0:00:02
+Downloading gradio_client-1.4.0-py3-none-any.whl (319 kB)
+Downloading tomlkit-0.12.0-py3-none-any.whl (37 kB)
+Downloading pillow-10.4.0-cp310-cp310-win_amd64.whl (2.6 MB)
+   ---------------------------------------- 2.6/2.6 MB 2.5 MB/s  0:00:01
+Downloading aiofiles-23.2.1-py3-none-any.whl (15 kB)
+Using cached anyio-4.16.0-py3-none-any.whl (134 kB)
+Downloading fastapi-0.162.2-py3-none-any.whl (151 kB)
+Downloading huggingface_hub-0.36.2-py3-none-any.whl (566 kB)
+   ---------------------------------------- 566.4/566.4 kB 2.8 MB/s  0:00:00
+Downloading MarkupSafe-2.1.5-cp310-cp310-win_amd64.whl (17 kB)
+Downloading orjson-3.13.0-cp310-cp310-win_amd64.whl (121 kB)
+Downloading pandas-2.3.3-cp310-cp310-win_amd64.whl (11.3 MB)
+   ---------------------------------------- 11.3/11.3 MB 3.4 MB/s  0:00:03
+Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Downloading semantic_version-2.10.0-py2.py3-none-any.whl (15 kB)
+Downloading tokenizers-0.15.2-cp310-none-win_amd64.whl (2.2 MB)
+   ---------------------------------------- 2.2/2.2 MB 4.1 MB/s  0:00:00
+Downloading typer-0.24.2-py3-none-any.whl (55 kB)
+Downloading websockets-12.0-cp310-cp310-win_amd64.whl (124 kB)
+Downloading albucore-0.2.20-py3-none-any.whl (61 kB)
+Using cached annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+Downloading click-8.5.1-py3-none-any.whl (126 kB)
+Using cached colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+Downloading contourpy-1.3.2-cp310-cp310-win_amd64.whl (221 kB)
+Downloading cycler-0.12.1-py3-none-any.whl (8.3 kB)
+Downloading docstring_parser-0.18.0-py3-none-any.whl (22 kB)
+Downloading exceptiongroup-1.3.1-py3-none-any.whl (16 kB)
+Downloading fonttools-4.65.0-cp310-cp310-win_amd64.whl (1.6 MB)
+   ---------------------------------------- 1.6/1.6 MB 4.0 MB/s  0:00:00
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Using cached idna-3.20-py3-none-any.whl (69 kB)
+Downloading kiwisolver-1.5.1-cp310-cp310-win_amd64.whl (70 kB)
+Using cached lazy_loader-0.6-py3-none-any.whl (8.8 kB)
+Using cached markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Using cached mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Downloading numkong-7.8.7-cp310-cp310-win_amd64.whl (495 kB)
+Downloading opencv_python_headless-4.11.0.86-cp37-abi3-win_amd64.whl (39.4 MB)
+   ---------------------------------------- 39.4/39.4 MB 3.4 MB/s  0:00:11
+Using cached opentelemetry_api-1.45.2-py3-none-any.whl (60 kB)
+Using cached packaging-26.3-py3-none-any.whl (129 kB)
+Downloading protobuf-7.36.2-cp310-abi3-win_amd64.whl (456 kB)
+Using cached pydantic-2.14.3-py3-none-any.whl (494 kB)
+Downloading pydantic_core-2.50.4-cp310-cp310-win_amd64.whl (2.3 MB)
+   ---------------------------------------- 2.3/2.3 MB 3.9 MB/s  0:00:00
+Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Using cached pyparsing-3.3.3-py3-none-any.whl (126 kB)
+Downloading python_dateutil-3.0.0-py2.py3-none-any.whl (94 kB)
+Downloading python_multipart-0.0.32-py3-none-any.whl (30 kB)
+Downloading pytz-2026.6-py2.py3-none-any.whl (506 kB)
+Downloading regex-2026.9.29-cp310-cp310-win_amd64.whl (280 kB)
+Downloading ruff-0.17.4-py3-none-win_amd64.whl (10.3 MB)
+   ---------------------------------------- 10.3/10.3 MB 3.6 MB/s  0:00:02
+Using cached safetensors-0.8.0-cp310-abi3-win_amd64.whl (355 kB)
+Downloading scikit_learn-1.7.2-cp310-cp310-win_amd64.whl (8.9 MB)
+   ---------------------------------------- 8.9/8.9 MB 3.6 MB/s  0:00:02
+Using cached joblib-1.6.0-py3-none-any.whl (306 kB)
+Using cached cloudpickle-3.1.2-py3-none-any.whl (22 kB)
+Using cached shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Downloading shtab-1.13.0-py3-none-any.whl (22 kB)
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Downloading starlette-1.7.0-py3-none-any.whl (78 kB)
+Downloading stringzilla-5.3.2-cp310-cp310-win_amd64.whl (750 kB)
+   ---------------------------------------- 750.9/750.9 kB 3.9 MB/s  0:00:00
+Using cached threadpoolctl-3.8.0-py3-none-any.whl (32 kB)
+Downloading tifffile-2025.5.10-py3-none-any.whl (226 kB)
+Using cached typing_inspection-0.4.5-py3-none-any.whl (14 kB)
+Downloading tzdata-2026.6-py2.py3-none-any.whl (348 kB)
+Using cached uvicorn-0.54.0-py3-none-any.whl (87 kB)
+Using cached certifi-2026.10.23-py3-none-any.whl (135 kB)
+Downloading coloredlogs-15.0.1-py2.py3-none-any.whl (46 kB)
+Downloading humanfriendly-10.0-py2.py3-none-any.whl (86 kB)
+Downloading ffmpy-1.0.0-py3-none-any.whl (5.6 kB)
+Using cached flatbuffers-25.12.19-py2.py3-none-any.whl (26 kB)
+Downloading future-1.0.0-py3-none-any.whl (491 kB)
+Downloading pydub-0.25.1-py2.py3-none-any.whl (32 kB)
+Downloading pyreadline3-3.5.6-py3-none-any.whl (85 kB)
+Using cached requests-2.34.2-py3-none-any.whl (73 kB)
+Downloading charset_normalizer-3.5.2-cp310-cp310-win_amd64.whl (215 kB)
+Using cached urllib3-2.8.0-py3-none-any.whl (135 kB)
+Installing collected packages: pytz, pydub, lmdb, flatbuffers, websockets, urllib3, tzdata, typing-inspection, tomlkit,
+threadpoolctl, stringzilla, six, shtab, shellingham, semantic-version, safetensors, ruff, regex, pyyaml, python-multipar
+t, pyreadline3, pyparsing, pygments, pydantic-core, protobuf, pillow, packaging, orjson, opentelemetry-api, numpy, numko
+ng, mdurl, markupsafe, kiwisolver, imageio-ffmpeg, idna, h11, future, fonttools, ffmpy, exceptiongroup, docstring-parser
+, cycler, colorama, cloudpickle, click, charset_normalizer, certifi, annotated-types, annotated-doc, aiofiles, uvicorn,
+tqdm, tifffile, scipy, requests, python-dateutil, pydantic, opencv-python-headless, opencv-python, onnx, markdown-it-py,
+ lazy-loader, joblib, imageio, humanfriendly, httpcore, ffmpeg-python, contourpy, anyio, albucore, starlette, scikit-lea
+rn, scikit-image, rich, pykalman, pandas, matplotlib, huggingface-hub, httpx, coloredlogs, tyro, typer, tokenizers, onnx
+runtime-gpu, gradio-client, fastapi, albumentations, transformers, gradio
+  Attempting uninstall: pillow
+    Found existing installation: pillow 12.3.0
+    Uninstalling pillow-12.3.0:
+      Successfully uninstalled pillow-12.3.0
+  Attempting uninstall: numpy
+    Found existing installation: numpy 2.2.6
+    Uninstalling numpy-2.2.6:
+      Successfully uninstalled numpy-2.2.6
+  Attempting uninstall: markupsafe
+    Found existing installation: MarkupSafe 3.0.3
+    Uninstalling MarkupSafe-3.0.3:
+      Successfully uninstalled MarkupSafe-3.0.3
+Successfully installed aiofiles-23.2.1 albucore-0.2.20 albumentations-1.4.10 annotated-doc-0.0.5 annotated-types-0.8.0 a
+nyio-4.16.0 certifi-2026.10.23 charset_normalizer-3.5.2 click-8.5.1 cloudpickle-3.1.2 colorama-0.4.6 coloredlogs-15.0.1
+contourpy-1.3.2 cycler-0.12.1 docstring-parser-0.18.0 exceptiongroup-1.3.1 fastapi-0.162.2 ffmpeg-python-0.2.0 ffmpy-1.0
+.0 flatbuffers-25.12.19 fonttools-4.65.0 future-1.0.0 gradio-5.1.0 gradio-client-1.4.0 h11-0.16.0 httpcore-1.0.9 httpx-0
+.28.1 huggingface-hub-0.36.2 humanfriendly-10.0 idna-3.20 imageio-2.34.2 imageio-ffmpeg-0.5.1 joblib-1.6.0 kiwisolver-1.
+5.1 lazy-loader-0.6 lmdb-1.4.1 markdown-it-py-4.2.0 markupsafe-2.1.5 matplotlib-3.9.0 mdurl-0.1.2 numkong-7.8.7 numpy-1.
+26.4 onnx-1.16.1 onnxruntime-gpu-1.18.0 opencv-python-4.10.0.84 opencv-python-headless-4.11.0.86 opentelemetry-api-1.45.
+2 orjson-3.13.0 packaging-26.3 pandas-2.3.3 pillow-10.4.0 protobuf-7.36.2 pydantic-2.14.3 pydantic-core-2.50.4 pydub-0.2
+5.1 pygments-2.21.0 pykalman-0.9.7 pyparsing-3.3.3 pyreadline3-3.5.6 python-dateutil-3.0.0 python-multipart-0.0.32 pytz-
+2026.6 pyyaml-6.0.1 regex-2026.9.29 requests-2.34.2 rich-13.7.1 ruff-0.17.4 safetensors-0.8.0 scikit-image-0.24.0 scikit
+-learn-1.7.2 scipy-1.13.1 semantic-version-2.10.0 shellingham-1.5.4 shtab-1.13.0 six-1.17.0 starlette-1.7.0 stringzilla-
+5.3.2 threadpoolctl-3.8.0 tifffile-2025.5.10 tokenizers-0.15.2 tomlkit-0.12.0 tqdm-4.66.4 transformers-4.38.0 typer-0.24
+.2 typing-inspection-0.4.5 tyro-0.8.5 tzdata-2026.6 urllib3-2.8.0 uvicorn-0.54.0 websockets-12.0
+LivePortrait: instalación de dependencias terminada.
+PS C:\Windows\system32> # ComfyUI: entorno independiente y CPU
+PS C:\Windows\system32> $CF = Join-Path $Root "ComfyUI"
+PS C:\Windows\system32> $BasePy = (py -3.12 -c "import sys; print(sys.executable)" 2>$null)
+PS C:\Windows\system32> if ($BasePy -and (Test-Path (Join-Path $CF "requirements.txt"))) {
+    if (!(Test-Path (Join-Path $CF ".venv\Scripts\python.exe"))) {
+        & $BasePy -m venv (Join-Path $CF ".venv")
+    }
+    $CFpy = Join-Path $CF ".venv\Scripts\python.exe"
+    & $CFpy -m pip install --upgrade pip
+    & $CFpy -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+    & $CFpy -m pip install -r (Join-Path $CF "requirements.txt")
+    Write-Host "ComfyUI: instalación de dependencias terminada."
+}
+
+Requirement already satisfied: pip in c:\ai_ugc_studio\comfyui\.venv\lib\site-packages (25.0.1)
+Collecting pip
+  Using cached pip-26.3-py3-none-any.whl.metadata (4.6 kB)
+Using cached pip-26.3-py3-none-any.whl (2.0 MB)
+Installing collected packages: pip
+  Attempting uninstall: pip
+    Found existing installation: pip 25.0.1
+    Uninstalling pip-25.0.1:
+      Successfully uninstalled pip-25.0.1
+Successfully installed pip-26.3
+Looking in indexes: https://download.pytorch.org/whl/cpu
+Collecting torch
+  Downloading torch-2.15.0%2Bcpu-cp312-cp312-win_amd64.whl.metadata (36 kB)
+Collecting torchvision
+  Using cached torchvision-0.29.2%2Bcpu-py3-none-win_amd64.whl.metadata (5.8 kB)
+Collecting torchaudio
+  Downloading torchaudio-2.11.1%2Bcpu-py3-none-win_amd64.whl.metadata (7.7 kB)
+Collecting filelock (from torch)
+  Downloading filelock-4.2.4-py3-none-any.whl.metadata (2.0 kB)
+Collecting typing-extensions>=4.13.0 (from torch)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting setuptools>=77.0.3 (from torch)
+  Using cached setuptools-78.1.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting sympy>=1.13.3 (from torch)
+  Using cached sympy-1.14.0-py3-none-any.whl.metadata (12 kB)
+Collecting networkx>=2.5.1 (from torch)
+  Using cached networkx-3.7-py3-none-any.whl.metadata (6.7 kB)
+Collecting jinja2 (from torch)
+  Using cached jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting fsspec>=0.8.5 (from torch)
+  Using cached fsspec-2026.9.0-py3-none-any.whl.metadata (10 kB)
+Collecting numpy (from torchvision)
+  Using cached numpy-2.5.4-cp312-cp312-win_amd64.whl.metadata (6.6 kB)
+Collecting pillow!=8.3.*,>=5.3.0 (from torchvision)
+  Using cached pillow-13.0.0-cp312-cp312-win_amd64.whl.metadata (9.3 kB)
+Collecting mpmath<1.4,>=1.1.0 (from sympy>=1.13.3->torch)
+  Using cached mpmath-1.3.0-py3-none-any.whl.metadata (8.6 kB)
+Collecting MarkupSafe>=2.0 (from jinja2->torch)
+  Downloading markupsafe-3.0.3-cp312-cp312-win_amd64.whl.metadata (2.8 kB)
+Downloading torch-2.15.0%2Bcpu-cp312-cp312-win_amd64.whl (126.6 MB)
+   ---------------------------------------- 126.6/126.6 MB 3.5 MB/s  0:00:35
+Using cached torchvision-0.29.2%2Bcpu-py3-none-win_amd64.whl (1.4 MB)
+Downloading torchaudio-2.11.1%2Bcpu-py3-none-win_amd64.whl (332 kB)
+Using cached fsspec-2026.9.0-py3-none-any.whl (221 kB)
+Using cached networkx-3.7-py3-none-any.whl (2.1 MB)
+Using cached pillow-13.0.0-cp312-cp312-win_amd64.whl (7.3 MB)
+Using cached setuptools-78.1.0-py3-none-any.whl (1.3 MB)
+Using cached sympy-1.14.0-py3-none-any.whl (6.3 MB)
+Using cached mpmath-1.3.0-py3-none-any.whl (536 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading filelock-4.2.4-py3-none-any.whl (162 kB)
+Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading markupsafe-3.0.3-cp312-cp312-win_amd64.whl (15 kB)
+Using cached numpy-2.5.4-cp312-cp312-win_amd64.whl (12.6 MB)
+Installing collected packages: mpmath, typing-extensions, sympy, setuptools, pillow, numpy, networkx, MarkupSafe, fsspec
+, filelock, jinja2, torch, torchvision, torchaudio
+Successfully installed MarkupSafe-3.0.3 filelock-4.2.4 fsspec-2026.9.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.7 numpy-2.5.
+4 pillow-13.0.0 setuptools-78.1.0 sympy-1.14.0 torch-2.15.0+cpu torchaudio-2.11.1+cpu torchvision-0.29.2+cpu typing-exte
+nsions-4.16.0
+Collecting comfyui-frontend-package==1.58.5 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 1))
+  Downloading comfyui_frontend_package-1.58.5-py3-none-any.whl.metadata (117 bytes)
+Collecting comfyui-workflow-templates==0.11.103 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates-0.11.103-py3-none-any.whl.metadata (24 kB)
+Collecting comfyui-embedded-docs==0.5.16 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 3))
+  Downloading comfyui_embedded_docs-0.5.16-py3-none-any.whl.metadata (5.3 kB)
+Requirement already satisfied: torch in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from -r C:\AI_UGC_STUDIO\Comfy
+UI\requirements.txt (line 4)) (2.15.0+cpu)
+Collecting torchsde (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 5))
+  Downloading torchsde-0.2.6-py3-none-any.whl.metadata (5.3 kB)
+Requirement already satisfied: torchvision in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from -r C:\AI_UGC_STUDIO
+\ComfyUI\requirements.txt (line 6)) (0.29.2+cpu)
+Requirement already satisfied: numpy>=1.25.0 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from -r C:\AI_UGC_STUD
+IO\ComfyUI\requirements.txt (line 7)) (2.5.4)
+Collecting einops (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 8))
+  Using cached einops-0.8.2-py3-none-any.whl.metadata (13 kB)
+Collecting transformers>=4.50.3 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9))
+  Downloading transformers-5.22.2-py3-none-any.whl.metadata (31 kB)
+Collecting tokenizers>=0.13.3 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 10))
+  Using cached tokenizers-0.23.3-cp310-abi3-win_amd64.whl.metadata (10 kB)
+Collecting sentencepiece (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 11))
+  Downloading sentencepiece-0.2.3-cp312-cp312-win_amd64.whl.metadata (35 kB)
+Collecting safetensors>=0.4.2 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 12))
+  Using cached safetensors-0.8.0-cp310-abi3-win_amd64.whl.metadata (4.2 kB)
+Collecting aiohttp>=3.11.8 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 13))
+  Using cached aiohttp-3.14.5-cp312-cp312-win_amd64.whl.metadata (8.5 kB)
+Collecting yarl>=1.18.0 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 14))
+  Using cached yarl-1.25.1-cp312-cp312-win_amd64.whl.metadata (115 kB)
+Collecting pyyaml (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 15))
+  Using cached pyyaml-6.0.3-cp312-cp312-win_amd64.whl.metadata (2.4 kB)
+Requirement already satisfied: Pillow>=10.1.0 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from -r C:\AI_UGC_STU
+DIO\ComfyUI\requirements.txt (line 16)) (13.0.0)
+Collecting scipy (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 17))
+  Using cached scipy-1.18.1-cp312-cp312-win_amd64.whl.metadata (61 kB)
+Collecting tqdm (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 18))
+  Using cached tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+Collecting psutil (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 19))
+  Using cached psutil-7.2.2-cp37-abi3-win_amd64.whl.metadata (22 kB)
+Collecting alembic (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 20))
+  Downloading alembic-1.20.1-py3-none-any.whl.metadata (7.3 kB)
+Collecting SQLAlchemy>=2.0.0 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 21))
+  Downloading sqlalchemy-2.1.8-cp312-cp312-win_amd64.whl.metadata (9.9 kB)
+Requirement already satisfied: filelock in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from -r C:\AI_UGC_STUDIO\Co
+mfyUI\requirements.txt (line 22)) (4.2.4)
+Collecting av>=17.0.0 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 23))
+  Downloading av-19.0.2-cp312-abi3-win_amd64.whl.metadata (5.1 kB)
+Collecting comfy-aimdo==0.6.0 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 24))
+  Downloading comfy_aimdo-0.6.0-cp39-abi3-win_amd64.whl.metadata (4.4 kB)
+Collecting comfy-kitchen==0.2.41 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 25))
+  Downloading comfy_kitchen-0.2.41-cp312-abi3-win_amd64.whl.metadata (19 kB)
+Collecting requests (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 26))
+  Using cached requests-2.34.2-py3-none-any.whl.metadata (4.8 kB)
+Collecting simpleeval>=1.0.0 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 27))
+  Downloading simpleeval-1.0.8-py3-none-any.whl.metadata (20 kB)
+Collecting blake3 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 28))
+  Downloading blake3-1.0.11-cp312-cp312-win_amd64.whl.metadata (5.0 kB)
+Collecting kornia>=0.7.1 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 31))
+  Downloading kornia-0.9.0-py3-none-any.whl.metadata (26 kB)
+Collecting spandrel (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 32))
+  Downloading spandrel-0.4.2-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic~=2.0 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 33))
+  Using cached pydantic-2.14.3-py3-none-any.whl.metadata (141 kB)
+Collecting pydantic-settings~=2.0 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 34))
+  Downloading pydantic_settings-2.16.2-py3-none-any.whl.metadata (4.0 kB)
+Collecting PyOpenGL>=3.1.8 (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 35))
+  Downloading pyopengl-3.1.10-py3-none-any.whl.metadata (3.3 kB)
+Collecting comfy-angle (from -r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 36))
+  Downloading comfy_angle-0.1.1-py3-none-win_amd64.whl.metadata (2.2 kB)
+Collecting comfyui-workflow-templates-core==0.3.394 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_STUDIO\Comf
+yUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_core-0.3.394-py3-none-any.whl.metadata (260 bytes)
+Collecting comfyui-workflow-templates-json==0.1.129 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_STUDIO\Comf
+yUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_json-0.1.129-py3-none-any.whl.metadata (266 bytes)
+Collecting comfyui-workflow-templates-media-api==0.3.84 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_STUDIO\
+ComfyUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_api-0.3.84-py3-none-any.whl.metadata (290 bytes)
+Collecting comfyui-workflow-templates-media-video==0.3.101 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_STUD
+IO\ComfyUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_video-0.3.101-py3-none-any.whl.metadata (283 bytes)
+Collecting comfyui-workflow-templates-media-image==0.3.160 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_STUD
+IO\ComfyUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_image-0.3.160-py3-none-any.whl.metadata (283 bytes)
+Collecting comfyui-workflow-templates-media-other==0.3.229 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_STUD
+IO\ComfyUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_other-0.3.229-py3-none-any.whl.metadata (306 bytes)
+Collecting comfyui-workflow-templates-media-assets-01==0.1.48 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_S
+TUDIO\ComfyUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_assets_01-0.1.48-py3-none-any.whl.metadata (290 bytes)
+Collecting comfyui-workflow-templates-media-assets-02==0.1.29 (from comfyui-workflow-templates==0.11.103->-r C:\AI_UGC_S
+TUDIO\ComfyUI\requirements.txt (line 2))
+  Downloading comfyui_workflow_templates_media_assets_02-0.1.29-py3-none-any.whl.metadata (290 bytes)
+Collecting annotated-types>=0.6.0 (from pydantic~=2.0->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 33))
+  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.50.4 (from pydantic~=2.0->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 33))
+  Using cached pydantic_core-2.50.4-cp312-cp312-win_amd64.whl.metadata (6.7 kB)
+Requirement already satisfied: typing-extensions>=4.16.0 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from pydan
+tic~=2.0->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 33)) (4.16.0)
+Collecting typing-inspection>=0.4.4 (from pydantic~=2.0->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 33))
+  Using cached typing_inspection-0.4.5-py3-none-any.whl.metadata (2.6 kB)
+Collecting python-dotenv>=1.2.2 (from pydantic-settings~=2.0->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 34))
+  Using cached python_dotenv-1.2.4-py3-none-any.whl.metadata (29 kB)
+Requirement already satisfied: setuptools>=77.0.3 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from torch->-r C:
+\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 4)) (78.1.0)
+Requirement already satisfied: sympy>=1.13.3 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from torch->-r C:\AI_U
+GC_STUDIO\ComfyUI\requirements.txt (line 4)) (1.14.0)
+Requirement already satisfied: networkx>=2.5.1 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from torch->-r C:\AI
+_UGC_STUDIO\ComfyUI\requirements.txt (line 4)) (3.7)
+Requirement already satisfied: jinja2 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from torch->-r C:\AI_UGC_STUD
+IO\ComfyUI\requirements.txt (line 4)) (3.1.6)
+Requirement already satisfied: fsspec>=0.8.5 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from torch->-r C:\AI_U
+GC_STUDIO\ComfyUI\requirements.txt (line 4)) (2026.9.0)
+Collecting trampoline>=0.1.2 (from torchsde->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 5))
+  Downloading trampoline-0.1.2-py3-none-any.whl.metadata (10 kB)
+Collecting huggingface-hub<3.0,>=1.31.0 (from transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9
+))
+  Using cached huggingface_hub-2.4.0-py3-none-any.whl.metadata (16 kB)
+Collecting packaging>=20.0 (from transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9))
+  Using cached packaging-26.3-py3-none-any.whl.metadata (3.5 kB)
+Collecting regex>=2025.10.22 (from transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9))
+  Downloading regex-2026.11.9-cp312-cp312-win_amd64.whl.metadata (41 kB)
+Collecting typer (from transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9))
+  Using cached typer-0.28.0-py3-none-any.whl.metadata (16 kB)
+Collecting click<9.0.0,>=8.4.2 (from huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\req
+uirements.txt (line 9))
+  Using cached click-8.5.1-py3-none-any.whl.metadata (2.6 kB)
+Collecting hf-xet<2.0.0,>=1.6.0 (from huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\re
+quirements.txt (line 9))
+  Using cached hf_xet-1.8.0-cp38-abi3-win_amd64.whl.metadata (4.9 kB)
+Collecting httpx2<3,>=2.0.0 (from huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requir
+ements.txt (line 9))
+  Using cached httpx2-2.16.0-py3-none-any.whl.metadata (10 kB)
+Collecting anyio>=4.10 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\C
+omfyUI\requirements.txt (line 9))
+  Using cached anyio-4.16.0-py3-none-any.whl.metadata (4.7 kB)
+Collecting httpcore2==2.16.0 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C:\AI_UGC_ST
+UDIO\ComfyUI\requirements.txt (line 9))
+  Using cached httpcore2-2.16.0-py3-none-any.whl.metadata (27 kB)
+Collecting idna>=3.18 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\Co
+mfyUI\requirements.txt (line 9))
+  Using cached idna-3.20-py3-none-any.whl.metadata (7.2 kB)
+Collecting truststore>=0.10 (from httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C:\AI_UGC_STU
+DIO\ComfyUI\requirements.txt (line 9))
+  Using cached truststore-0.10.5-py3-none-any.whl.metadata (4.5 kB)
+Collecting h11>=0.16 (from httpcore2==2.16.0->httpx2<3,>=2.0.0->huggingface-hub<3.0,>=1.31.0->transformers>=4.50.3->-r C
+:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting aiohappyeyeballs>=2.5.0 (from aiohttp>=3.11.8->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 13))
+  Using cached aiohappyeyeballs-2.7.1-py3-none-any.whl.metadata (5.9 kB)
+Collecting aiosignal>=1.4.0 (from aiohttp>=3.11.8->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 13))
+  Using cached aiosignal-1.4.0-py3-none-any.whl.metadata (3.7 kB)
+Collecting attrs>=17.3.0 (from aiohttp>=3.11.8->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 13))
+  Using cached attrs-26.1.0-py3-none-any.whl.metadata (8.8 kB)
+Collecting frozenlist>=1.1.1 (from aiohttp>=3.11.8->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 13))
+  Using cached frozenlist-1.8.0-cp312-cp312-win_amd64.whl.metadata (21 kB)
+Collecting multidict<8.0,>=4.5 (from aiohttp>=3.11.8->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 13))
+  Using cached multidict-7.2.1-cp312-cp312-win_amd64.whl.metadata (6.3 kB)
+Collecting propcache>=0.2.0 (from aiohttp>=3.11.8->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 13))
+  Using cached propcache-0.5.4-cp312-cp312-win_amd64.whl.metadata (25 kB)
+Collecting colorama (from tqdm->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 18))
+  Using cached colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+Collecting Mako (from alembic->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 20))
+  Downloading mako-1.4.3-py3-none-any.whl.metadata (2.9 kB)
+Collecting charset_normalizer<4,>=2 (from requests->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 26))
+  Using cached charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl.metadata (47 kB)
+Collecting urllib3<3,>=1.26 (from requests->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 26))
+  Using cached urllib3-2.8.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting certifi>=2023.5.7 (from requests->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 26))
+  Using cached certifi-2026.10.23-py3-none-any.whl.metadata (2.5 kB)
+Collecting kornia-rs>=0.2.0 (from kornia>=0.7.1->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 31))
+  Downloading kornia_rs-0.2.0-cp312-cp312-win_amd64.whl.metadata (19 kB)
+Requirement already satisfied: mpmath<1.4,>=1.1.0 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from sympy>=1.13.
+3->torch->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 4)) (1.3.0)
+Requirement already satisfied: MarkupSafe>=2.0 in C:\AI_UGC_STUDIO\ComfyUI\.venv\Lib\site-packages (from jinja2->torch->
+-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 4)) (3.0.3)
+Collecting shellingham>=1.3.0 (from typer->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9))
+  Using cached shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting rich>=13.8.0 (from typer->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9))
+  Downloading rich-15.0.0-py3-none-any.whl.metadata (18 kB)
+Collecting annotated-doc>=0.0.2 (from typer->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirements.txt (line 9)
+)
+  Using cached annotated_doc-0.0.5-py3-none-any.whl.metadata (6.5 kB)
+Collecting markdown-it-py>=2.2.0 (from rich>=13.8.0->typer->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requiremen
+ts.txt (line 9))
+  Using cached markdown_it_py-4.2.0-py3-none-any.whl.metadata (7.4 kB)
+Collecting pygments<3.0.0,>=2.13.0 (from rich>=13.8.0->typer->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyUI\requirem
+ents.txt (line 9))
+  Using cached pygments-2.21.0-py3-none-any.whl.metadata (2.5 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=13.8.0->typer->transformers>=4.50.3->-r C:\AI_UGC_STUDIO\ComfyU
+I\requirements.txt (line 9))
+  Using cached mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Downloading comfyui_frontend_package-1.58.5-py3-none-any.whl (29.4 MB)
+   ---------------------------------------- 29.4/29.4 MB 3.0 MB/s  0:00:09
+Downloading comfyui_workflow_templates-0.11.103-py3-none-any.whl (10 kB)
+Downloading comfyui_embedded_docs-0.5.16-py3-none-any.whl (24.6 MB)
+   ---------------------------------------- 24.6/24.6 MB 3.2 MB/s  0:00:07
+Downloading comfy_aimdo-0.6.0-cp39-abi3-win_amd64.whl (284 kB)
+Downloading comfy_kitchen-0.2.41-cp312-abi3-win_amd64.whl (65.3 MB)
+   ---------------------------------------- 65.3/65.3 MB 3.1 MB/s  0:00:20
+Downloading comfyui_workflow_templates_core-0.3.394-py3-none-any.whl (88 kB)
+Downloading comfyui_workflow_templates_json-0.1.129-py3-none-any.whl (4.4 MB)
+   ---------------------------------------- 4.4/4.4 MB 2.8 MB/s  0:00:01
+Downloading comfyui_workflow_templates_media_api-0.3.84-py3-none-any.whl (100.1 MB)
+   ---------------------------------------- 100.1/100.1 MB 2.9 MB/s  0:00:36
+Downloading comfyui_workflow_templates_media_assets_01-0.1.48-py3-none-any.whl (94.2 MB)
+   ---------------------------------------- 94.2/94.2 MB 3.4 MB/s  0:00:27
+Downloading comfyui_workflow_templates_media_assets_02-0.1.29-py3-none-any.whl (75.2 MB)
+   ---------------------------------------- 75.2/75.2 MB 3.1 MB/s  0:00:24
+Downloading comfyui_workflow_templates_media_image-0.3.160-py3-none-any.whl (89.4 MB)
+   ---------------------------------------- 89.4/89.4 MB 2.7 MB/s  0:00:37
+Downloading comfyui_workflow_templates_media_other-0.3.229-py3-none-any.whl (89.1 MB)
+   ---------------------------------------- 89.1/89.1 MB 2.5 MB/s  0:00:34
+Downloading comfyui_workflow_templates_media_video-0.3.101-py3-none-any.whl (104.3 MB)
+   ---------------------------------------- 104.3/104.3 MB 692.8 kB/s  0:00:56
+Using cached pydantic-2.14.3-py3-none-any.whl (494 kB)
+Using cached pydantic_core-2.50.4-cp312-cp312-win_amd64.whl (2.3 MB)
+Downloading pydantic_settings-2.16.2-py3-none-any.whl (81 kB)
+Downloading torchsde-0.2.6-py3-none-any.whl (61 kB)
+Using cached einops-0.8.2-py3-none-any.whl (65 kB)
+Downloading transformers-5.22.2-py3-none-any.whl (13.1 MB)
+   ---------------------------------------- 13.1/13.1 MB 3.3 MB/s  0:00:04
+Using cached tokenizers-0.23.3-cp310-abi3-win_amd64.whl (2.9 MB)
+Using cached huggingface_hub-2.4.0-py3-none-any.whl (857 kB)
+Using cached click-8.5.1-py3-none-any.whl (126 kB)
+Using cached hf_xet-1.8.0-cp38-abi3-win_amd64.whl (3.9 MB)
+Using cached httpx2-2.16.0-py3-none-any.whl (97 kB)
+Using cached httpcore2-2.16.0-py3-none-any.whl (85 kB)
+Downloading sentencepiece-0.2.3-cp312-cp312-win_amd64.whl (1.7 MB)
+   ---------------------------------------- 1.7/1.7 MB 3.3 MB/s  0:00:00
+Using cached safetensors-0.8.0-cp310-abi3-win_amd64.whl (355 kB)
+Using cached aiohttp-3.14.5-cp312-cp312-win_amd64.whl (506 kB)
+Using cached yarl-1.25.1-cp312-cp312-win_amd64.whl (102 kB)
+Using cached multidict-7.2.1-cp312-cp312-win_amd64.whl (95 kB)
+Using cached pyyaml-6.0.3-cp312-cp312-win_amd64.whl (154 kB)
+Using cached scipy-1.18.1-cp312-cp312-win_amd64.whl (36.7 MB)
+Using cached tqdm-4.70.1-py3-none-any.whl (80 kB)
+Using cached psutil-7.2.2-cp37-abi3-win_amd64.whl (137 kB)
+Downloading alembic-1.20.1-py3-none-any.whl (270 kB)
+Downloading sqlalchemy-2.1.8-cp312-cp312-win_amd64.whl (2.4 MB)
+   ---------------------------------------- 2.4/2.4 MB 3.5 MB/s  0:00:00
+Downloading av-19.0.2-cp312-abi3-win_amd64.whl (28.2 MB)
+   ---------------------------------------- 28.2/28.2 MB 3.6 MB/s  0:00:07
+Using cached requests-2.34.2-py3-none-any.whl (73 kB)
+Using cached charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl (207 kB)
+Using cached idna-3.20-py3-none-any.whl (69 kB)
+Using cached urllib3-2.8.0-py3-none-any.whl (135 kB)
+Downloading simpleeval-1.0.8-py3-none-any.whl (18 kB)
+Downloading blake3-1.0.11-cp312-cp312-win_amd64.whl (218 kB)
+Downloading kornia-0.9.0-py3-none-any.whl (1.9 MB)
+   ---------------------------------------- 1.9/1.9 MB 3.6 MB/s  0:00:00
+Downloading spandrel-0.4.2-py3-none-any.whl (320 kB)
+Downloading pyopengl-3.1.10-py3-none-any.whl (3.2 MB)
+   ---------------------------------------- 3.2/3.2 MB 3.8 MB/s  0:00:00
+Downloading comfy_angle-0.1.1-py3-none-win_amd64.whl (5.6 MB)
+   ---------------------------------------- 5.6/5.6 MB 3.9 MB/s  0:00:01
+Using cached aiohappyeyeballs-2.7.1-py3-none-any.whl (15 kB)
+Using cached aiosignal-1.4.0-py3-none-any.whl (7.5 kB)
+Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Using cached anyio-4.16.0-py3-none-any.whl (134 kB)
+Using cached attrs-26.1.0-py3-none-any.whl (67 kB)
+Using cached certifi-2026.10.23-py3-none-any.whl (135 kB)
+Using cached frozenlist-1.8.0-cp312-cp312-win_amd64.whl (44 kB)
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading kornia_rs-0.2.0-cp312-cp312-win_amd64.whl (4.3 MB)
+   ---------------------------------------- 4.3/4.3 MB 3.3 MB/s  0:00:01
+Using cached packaging-26.3-py3-none-any.whl (129 kB)
+Using cached propcache-0.5.4-cp312-cp312-win_amd64.whl (46 kB)
+Using cached python_dotenv-1.2.4-py3-none-any.whl (23 kB)
+Downloading regex-2026.11.9-cp312-cp312-win_amd64.whl (280 kB)
+Downloading trampoline-0.1.2-py3-none-any.whl (5.2 kB)
+Using cached truststore-0.10.5-py3-none-any.whl (19 kB)
+Using cached typing_inspection-0.4.5-py3-none-any.whl (14 kB)
+Using cached colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+Downloading mako-1.4.3-py3-none-any.whl (80 kB)
+Downloading typer-0.28.0-py3-none-any.whl (123 kB)
+Using cached annotated_doc-0.0.5-py3-none-any.whl (5.3 kB)
+Downloading rich-15.0.0-py3-none-any.whl (310 kB)
+Using cached pygments-2.21.0-py3-none-any.whl (1.3 MB)
+Using cached markdown_it_py-4.2.0-py3-none-any.whl (91 kB)
+Using cached mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Using cached shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Installing collected packages: trampoline, PyOpenGL, urllib3, typing-inspection, truststore, SQLAlchemy, simpleeval, she
+llingham, sentencepiece, scipy, safetensors, regex, pyyaml, python-dotenv, pygments, pydantic-core, psutil, propcache, p
+ackaging, multidict, mdurl, Mako, kornia-rs, idna, hf-xet, h11, frozenlist, einops, comfyui-workflow-templates-media-vid
+eo, comfyui-workflow-templates-media-other, comfyui-workflow-templates-media-image, comfyui-workflow-templates-media-ass
+ets-02, comfyui-workflow-templates-media-assets-01, comfyui-workflow-templates-media-api, comfyui-workflow-templates-jso
+n, comfyui-workflow-templates-core, comfyui-frontend-package, comfyui-embedded-docs, comfy-kitchen, comfy-angle, comfy-a
+imdo, colorama, click, charset_normalizer, certifi, blake3, av, attrs, annotated-types, annotated-doc, aiohappyeyeballs,
+ yarl, tqdm, requests, pydantic, markdown-it-py, httpcore2, comfyui-workflow-templates, anyio, alembic, aiosignal, torch
+sde, rich, pydantic-settings, kornia, httpx2, aiohttp, typer, spandrel, huggingface-hub, tokenizers, transformers
+Successfully installed Mako-1.4.3 PyOpenGL-3.1.10 SQLAlchemy-2.1.8 aiohappyeyeballs-2.7.1 aiohttp-3.14.5 aiosignal-1.4.0
+ alembic-1.20.1 annotated-doc-0.0.5 annotated-types-0.8.0 anyio-4.16.0 attrs-26.1.0 av-19.0.2 blake3-1.0.11 certifi-2026
+.10.23 charset_normalizer-3.5.2 click-8.5.1 colorama-0.4.6 comfy-aimdo-0.6.0 comfy-angle-0.1.1 comfy-kitchen-0.2.41 comf
+yui-embedded-docs-0.5.16 comfyui-frontend-package-1.58.5 comfyui-workflow-templates-0.11.103 comfyui-workflow-templates-
+core-0.3.394 comfyui-workflow-templates-json-0.1.129 comfyui-workflow-templates-media-api-0.3.84 comfyui-workflow-templa
+tes-media-assets-01-0.1.48 comfyui-workflow-templates-media-assets-02-0.1.29 comfyui-workflow-templates-media-image-0.3.
+160 comfyui-workflow-templates-media-other-0.3.229 comfyui-workflow-templates-media-video-0.3.101 einops-0.8.2 frozenlis
+t-1.8.0 h11-0.16.0 hf-xet-1.8.0 httpcore2-2.16.0 httpx2-2.16.0 huggingface-hub-2.4.0 idna-3.20 kornia-0.9.0 kornia-rs-0.
+2.0 markdown-it-py-4.2.0 mdurl-0.1.2 multidict-7.2.1 packaging-26.3 propcache-0.5.4 psutil-7.2.2 pydantic-2.14.3 pydanti
+c-core-2.50.4 pydantic-settings-2.16.2 pygments-2.21.0 python-dotenv-1.2.4 pyyaml-6.0.3 regex-2026.11.9 requests-2.34.2
+rich-15.0.0 safetensors-0.8.0 scipy-1.18.1 sentencepiece-0.2.3 shellingham-1.5.4 simpleeval-1.0.8 spandrel-0.4.2 tokeniz
+ers-0.23.3 torchsde-0.2.6 tqdm-4.70.1 trampoline-0.1.2 transformers-5.22.2 truststore-0.10.5 typer-0.28.0 typing-inspect
+ion-0.4.5 urllib3-2.8.0 yarl-1.25.1
+ComfyUI: instalación de dependencias terminada.
+PS C:\Windows\system32> # Comprobar instalaciones
+PS C:\Windows\system32> Write-Host "`n========== VERIFICACION ==========" -ForegroundColor Cyan
+
+========== VERIFICACION ==========
+PS C:\Windows\system32> foreach ($Name in $Repos.Keys) {
+    $Dir = Join-Path $Root $Name
+    $Venv = Join-Path $Dir ".venv\Scripts\python.exe"
+    Write-Host "$Name | Código: $(Test-Path (Join-Path $Dir ".git")) | Entorno: $(Test-Path $Venv)"
+}
+LivePortrait | Código: True | Entorno: True
+ComfyUI | Código: True | Entorno: True
+SadTalker | Código: True | Entorno: False
+Wav2Lip | Código: True | Entorno: False
+MuseTalk | Código: True | Entorno: False
+PS C:\Windows\system32> Write-Host "`nMotores descargados en: $Root"
+
+Motores descargados en: C:\AI_UGC_STUDIO
+PS C:\Windows\system32> Write-Host "Informe: $Log"
+Informe: C:\AI_UGC_STUDIO\INSTALACION_MOTORES.txt
+PS C:\Windows\system32> Write-Host "MuseTalk requiere CUDA/NVIDIA; no se instala su entorno incompatible."
+MuseTalk requiere CUDA/NVIDIA; no se instala su entorno incompatible.
+PS C:\Windows\system32> Write-Host "Wav2Lip requiere revisión de dependencias y licencia."
+Wav2Lip requiere revisión de dependencias y licencia.
+PS C:\Windows\system32> Write-Host "SadTalker requiere entorno Python 3.8 independiente."
+SadTalker requiere entorno Python 3.8 independiente.
+PS C:\Windows\system32> Stop-Transcript | Out-Null
+**********************
+Fin de la transcripción de Windows PowerShell
+Hora de finalización: 20261109100613
+**********************

@@ -1,0 +1,5 @@
+gradio>=5.0
+edge-tts
+huggingface_hub
+torch
+numpy

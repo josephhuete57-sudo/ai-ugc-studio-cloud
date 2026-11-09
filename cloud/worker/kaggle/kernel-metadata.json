@@ -1,0 +1,14 @@
+{
+  "id": "ai-ugc-studio/worker",
+  "title": "AI UGC Studio GPU worker",
+  "code_file": "kernel.py",
+  "kernel_type": "script",
+  "enable_gpu": true,
+  "enable_internet": true,
+  "parameters": {
+    "BACKEND_URL": "https://TU_BACKEND.onrender.com",
+    "WORKER_KEY": "CAMBIAR",
+    "HF_TOKEN": "",
+    "MAX_RUNTIME_MIN": "55"
+  }
+}

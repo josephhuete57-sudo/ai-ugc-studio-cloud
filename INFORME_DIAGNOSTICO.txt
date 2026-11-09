@@ -1,0 +1,230 @@
+﻿**********************
+Inicio de la transcripción de Windows PowerShell
+Hora de inicio: 20261109083950
+Nombre de usuario: DESKTOP-E3351MV\josep
+Usuario RunAs: DESKTOP-E3351MV\josep
+Nombre de la configuración: 
+Máquina: DESKTOP-E3351MV (Microsoft Windows NT 10.0.19045.0)
+Aplicación host: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Id. de proceso: 2852
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS C:\Windows\system32> function Status($Name,$OK,$Detail="") {
+    $s = if ($OK) {"OK"} else {"FALTA / ERROR"}
+    Write-Host "[$s] $Name $Detail" -ForegroundColor $(if($OK){"Green"}else{"Yellow"})
+}
+PS C:\Windows\system32> Write-Host "`n===== AI UGC STUDIO - CONFIGURACION INTEGRAL =====" -ForegroundColor Cyan
+
+===== AI UGC STUDIO - CONFIGURACION INTEGRAL =====
+PS C:\Windows\system32> # 1. Python
+PS C:\Windows\system32> $Py = Get-Command python -ErrorAction SilentlyContinue
+PS C:\Windows\system32> if (!$Py) { $Py = Get-Command py -ErrorAction SilentlyContinue }
+PS C:\Windows\system32> if (!$Py) {
+    Write-Host "Instalando Python..."
+    winget install -e --id Python.Python.3.12 --accept-package-agreements --accept-source-agreements
+    $Py = Get-Command python -ErrorAction SilentlyContinue
+}
+PS C:\Windows\system32> Status "Python" ([bool]$Py)
+[OK] Python
+PS C:\Windows\system32> # 2. Entorno virtual
+PS C:\Windows\system32> $VenvPython = Join-Path $P ".venv\Scripts\python.exe"
+PS C:\Windows\system32> if (!(Test-Path $VenvPython) -and $Py) {
+    & $Py.Source -m venv (Join-Path $P ".venv")
+}
+PS C:\Windows\system32> if (Test-Path $VenvPython) {
+    & $VenvPython -m pip install --upgrade pip
+    $Packages = @(
+        "requests","python-dotenv","Pillow","numpy","opencv-python",
+        "imageio","imageio-ffmpeg","moviepy","pydantic","tqdm",
+        "soundfile","scipy"
+    )
+    & $VenvPython -m pip install $Packages
+    Status "Entorno Python y dependencias" ($LASTEXITCODE -eq 0)
+} else {
+    Status "Entorno Python" $false
+}
+Requirement already satisfied: pip in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (26.3)
+Requirement already satisfied: requests in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (2.34.2)
+Requirement already satisfied: python-dotenv in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (1.2.4)
+Requirement already satisfied: Pillow in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (13.0.0)
+Collecting numpy
+  Using cached numpy-2.5.4-cp312-cp312-win_amd64.whl.metadata (6.6 kB)
+Collecting opencv-python
+  Downloading opencv_python-5.0.0.93-cp37-abi3-win_amd64.whl.metadata (20 kB)
+Collecting imageio
+  Downloading imageio-2.38.1-py3-none-any.whl.metadata (9.7 kB)
+Collecting imageio-ffmpeg
+  Downloading imageio_ffmpeg-0.8.1-py3-none-win_amd64.whl.metadata (1.5 kB)
+Collecting moviepy
+  Downloading moviepy-2.2.1-py3-none-any.whl.metadata (6.9 kB)
+Collecting pydantic
+  Downloading pydantic-2.14.3-py3-none-any.whl.metadata (141 kB)
+Collecting tqdm
+  Using cached tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+Collecting soundfile
+  Using cached soundfile-0.14.0-py2.py3-none-win_amd64.whl.metadata (18 kB)
+Collecting scipy
+  Using cached scipy-1.18.1-cp312-cp312-win_amd64.whl.metadata (61 kB)
+Requirement already satisfied: charset_normalizer<4,>=2 in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (from requests) (3.5
+.2)
+Requirement already satisfied: idna<4,>=2.5 in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (from requests) (3.20)
+Requirement already satisfied: urllib3<3,>=1.26 in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (from requests) (2.8.0)
+Requirement already satisfied: certifi>=2023.5.7 in C:\AI_UGC_STUDIO\.venv\Lib\site-packages (from requests) (2026.10.23
+)
+Collecting decorator<6.0,>=4.0.2 (from moviepy)
+  Using cached decorator-5.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting proglog<=1.0.0 (from moviepy)
+  Downloading proglog-0.1.12-py3-none-any.whl.metadata (794 bytes)
+Collecting Pillow
+  Downloading pillow-11.3.0-cp312-cp312-win_amd64.whl.metadata (9.2 kB)
+Collecting annotated-types>=0.6.0 (from pydantic)
+  Using cached annotated_types-0.8.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.50.4 (from pydantic)
+  Downloading pydantic_core-2.50.4-cp312-cp312-win_amd64.whl.metadata (6.7 kB)
+Collecting typing-extensions>=4.16.0 (from pydantic)
+  Using cached typing_extensions-4.16.0-py3-none-any.whl.metadata (3.3 kB)
+Collecting typing-inspection>=0.4.4 (from pydantic)
+  Downloading typing_inspection-0.4.5-py3-none-any.whl.metadata (2.6 kB)
+Collecting colorama (from tqdm)
+  Using cached colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+Collecting cffi>=1.0 (from soundfile)
+  Using cached cffi-2.1.1-cp312-cp312-win_amd64.whl.metadata (2.6 kB)
+Collecting pycparser (from cffi>=1.0->soundfile)
+  Using cached pycparser-3.12-py3-none-any.whl.metadata (9.7 kB)
+Using cached numpy-2.5.4-cp312-cp312-win_amd64.whl (12.6 MB)
+Downloading opencv_python-5.0.0.93-cp37-abi3-win_amd64.whl (44.0 MB)
+   ---------------------------------------- 44.0/44.0 MB 3.2 MB/s  0:00:13
+Downloading imageio-2.38.1-py3-none-any.whl (328 kB)
+Downloading imageio_ffmpeg-0.8.1-py3-none-win_amd64.whl (38.9 MB)
+   ---------------------------------------- 38.9/38.9 MB 3.3 MB/s  0:00:11
+Downloading moviepy-2.2.1-py3-none-any.whl (129 kB)
+Downloading pillow-11.3.0-cp312-cp312-win_amd64.whl (7.0 MB)
+   ---------------------------------------- 7.0/7.0 MB 3.7 MB/s  0:00:01
+Using cached decorator-5.3.1-py3-none-any.whl (10 kB)
+Downloading proglog-0.1.12-py3-none-any.whl (6.3 kB)
+Downloading pydantic-2.14.3-py3-none-any.whl (494 kB)
+Downloading pydantic_core-2.50.4-cp312-cp312-win_amd64.whl (2.3 MB)
+   ---------------------------------------- 2.3/2.3 MB 3.4 MB/s  0:00:00
+Using cached tqdm-4.70.1-py3-none-any.whl (80 kB)
+Using cached soundfile-0.14.0-py2.py3-none-win_amd64.whl (1.0 MB)
+Using cached scipy-1.18.1-cp312-cp312-win_amd64.whl (36.7 MB)
+Using cached annotated_types-0.8.0-py3-none-any.whl (13 kB)
+Using cached cffi-2.1.1-cp312-cp312-win_amd64.whl (185 kB)
+Using cached typing_extensions-4.16.0-py3-none-any.whl (45 kB)
+Downloading typing_inspection-0.4.5-py3-none-any.whl (14 kB)
+Using cached colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+Using cached pycparser-3.12-py3-none-any.whl (62 kB)
+Installing collected packages: typing-extensions, pycparser, Pillow, numpy, imageio-ffmpeg, decorator, colorama, annotat
+ed-types, typing-inspection, tqdm, scipy, pydantic-core, opencv-python, imageio, cffi, soundfile, pydantic, proglog, mov
+iepy
+  Attempting uninstall: Pillow
+    Found existing installation: pillow 13.0.0
+    Uninstalling pillow-13.0.0:
+      Successfully uninstalled pillow-13.0.0
+Successfully installed Pillow-11.3.0 annotated-types-0.8.0 cffi-2.1.1 colorama-0.4.6 decorator-5.3.1 imageio-2.38.1 imag
+eio-ffmpeg-0.8.1 moviepy-2.2.1 numpy-2.5.4 opencv-python-5.0.0.93 proglog-0.1.12 pycparser-3.12 pydantic-2.14.3 pydantic
+-core-2.50.4 scipy-1.18.1 soundfile-0.14.0 tqdm-4.70.1 typing-extensions-4.16.0 typing-inspection-0.4.5
+[OK] Entorno Python y dependencias
+PS C:\Windows\system32> # 3. Fish Audio: verificar configuración sin mostrar secretos
+PS C:\Windows\system32> $EnvFile = Join-Path $P ".env"
+PS C:\Windows\system32> $FishConfigured = $false
+PS C:\Windows\system32> if (Test-Path $EnvFile) {
+    $EnvText = Get-Content $EnvFile -Raw
+    $FishConfigured = $EnvText -match '(?im)^\s*(FISH_AUDIO_API_KEY|FISH_API_KEY)\s*=\s*.+'
+}
+PS C:\Windows\system32> Status "Fish Audio API Key en .env" $FishConfigured
+[OK] Fish Audio API Key en .env
+PS C:\Windows\system32> # 4. FFmpeg
+PS C:\Windows\system32> $FF = Get-Command ffmpeg -ErrorAction SilentlyContinue
+PS C:\Windows\system32> if (!$FF -and (Get-Command winget -ErrorAction SilentlyContinue)) {
+    Write-Host "Instalando FFmpeg..."
+    winget install -e --id Gyan.FFmpeg --accept-package-agreements --accept-source-agreements
+    $FF = Get-Command ffmpeg -ErrorAction SilentlyContinue
+}
+PS C:\Windows\system32> if ($FF) {
+    & ffmpeg -version | Select-Object -First 1
+}
+ffmpeg version 9.0.2-full_build-www.gyan.dev Copyright (c) 2000-2026 the FFmpeg developers
+PS C:\Windows\system32> Status "FFmpeg" ([bool]$FF)
+[OK] FFmpeg
+PS C:\Windows\system32> # 5. Comprobar GPU
+PS C:\Windows\system32> try {
+    $GPU = Get-CimInstance Win32_VideoController |
+        Select-Object -ExpandProperty Name
+    $GPU | ForEach-Object { Write-Host "GPU: $_" }
+} catch { $GPU = @() }
+GPU: Intel(R) HD Graphics 4600
+GPU: AMD Radeon HD 8600M Series
+PS C:\Windows\system32> Status "Detección de GPU" ($GPU.Count -gt 0)
+[OK] Detección de GPU
+PS C:\Windows\system32> # 6. Detectar motores y archivos existentes
+PS C:\Windows\system32> $Engines = @(
+    "LivePortrait","SadTalker","Wav2Lip","MuseTalk",
+    "ComfyUI","Hallo","EchoMimic"
+)
+PS C:\Windows\system32> foreach ($Engine in $Engines) {
+    $Found = Get-ChildItem $P -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $_.Name -like "*$Engine*" }
+    Status "Motor $Engine" ([bool]$Found)
+}
+[FALTA / ERROR] Motor LivePortrait
+[FALTA / ERROR] Motor SadTalker
+[FALTA / ERROR] Motor Wav2Lip
+[FALTA / ERROR] Motor MuseTalk
+[FALTA / ERROR] Motor ComfyUI
+[FALTA / ERROR] Motor Hallo
+[FALTA / ERROR] Motor EchoMimic
+PS C:\Windows\system32> # 7. Probar Fish Audio si existe la clave
+PS C:\Windows\system32> if ($FishConfigured -and (Test-Path $VenvPython)) {
+    @'
+import os, re, requests
+from pathlib import Path
+from dotenv import load_dotenv
+
+p = Path(r"C:\AI_UGC_STUDIO")
+load_dotenv(p / ".env")
+key = os.getenv("FISH_AUDIO_API_KEY") or os.getenv("FISH_API_KEY")
+if not key:
+    print("FISH_ERROR: No se encontró la variable de API")
+else:
+    try:
+        r = requests.get(
+            "https://api.fish.audio/model",
+            headers={"Authorization": f"Bearer {key}"},
+            timeout=25
+        )
+        print("FISH_HTTP_STATUS:", r.status_code)
+        print("FISH_CONNECTION:", "OK" if r.ok else "REVISAR CREDENCIALES O API")
+    except Exception as e:
+        print("FISH_ERROR:", str(e))
+'@ | Set-Content (Join-Path $P "_test_fish.py") -Encoding UTF8
+    & $VenvPython (Join-Path $P "_test_fish.py")
+} else {
+    Write-Host "Fish Audio: prueba omitida; falta configurar la clave."
+}
+FISH_HTTP_STATUS: 200
+FISH_CONNECTION: OK
+PS C:\Windows\system32> # 8. Resumen
+PS C:\Windows\system32> Write-Host "`n===== RESUMEN =====" -ForegroundColor Cyan
+
+===== RESUMEN =====
+PS C:\Windows\system32> Write-Host "Proyecto: $P"
+Proyecto: C:\AI_UGC_STUDIO
+PS C:\Windows\system32> Write-Host "Informe: $Log"
+Informe: C:\AI_UGC_STUDIO\INFORME_DIAGNOSTICO.txt
+PS C:\Windows\system32> Write-Host "Entorno virtual: $VenvPython"
+Entorno virtual: C:\AI_UGC_STUDIO\.venv\Scripts\python.exe
+PS C:\Windows\system32> Write-Host "No se ha declarado ningún video como generado sin verificarlo."
+No se ha declarado ningún video como generado sin verificarlo.
+PS C:\Windows\system32> Stop-Transcript | Out-Null
+**********************
+Fin de la transcripción de Windows PowerShell
+Hora de finalización: 20261109084113
+**********************

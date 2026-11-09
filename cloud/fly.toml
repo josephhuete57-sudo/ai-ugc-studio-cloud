@@ -1,0 +1,36 @@
+# Despliegue gratuito (Fly.io free tier / cualquier VPS).
+# No usar pago: CLOUD_MODE=FREE_CLOUD y sin ALLOW_PAID.
+app = "ai-ugc-studio-cloud"
+primary_region = "iad"
+
+[build]
+dockerfile = "cloud/backend/Dockerfile"
+
+[[vm]]
+size = "shared-cpu-1x"
+memory = "1gb"
+
+[env]
+CLOUD_MODE = "FREE_CLOUD"
+CLOUD_PORT = "8002"
+CLOUD_MAX_DAILY_JOBS = "10"
+CLOUD_MAX_JOB_SECONDS = "1800"
+
+[[services]]
+internal_port = 8002
+force_https = true
+
+[[services.ports]]
+port = 443
+handlers = ["tls"]
+
+[[services.ports]]
+port = 80
+handlers = ["http"]
+
+[[services.http_checks]]
+grace_period = "30s"
+interval = "20s"
+method = "GET"
+path = "/api/cloud/health"
+protocol = "http"

@@ -1,0 +1,668 @@
+﻿**********************
+Inicio de la transcripción de Windows PowerShell
+Hora de inicio: 20261109100804
+Nombre de usuario: DESKTOP-E3351MV\josep
+Usuario RunAs: DESKTOP-E3351MV\josep
+Nombre de la configuración: 
+Máquina: DESKTOP-E3351MV (Microsoft Windows NT 10.0.19045.0)
+Aplicación host: C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe
+Id. de proceso: 10560
+PSVersion: 5.1.19041.6456
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.19041.6456
+BuildVersion: 10.0.19041.6456
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS C:\Windows\system32> Write-Host "=== INSTALANDO SADTALKER Y WAV2LIP ===" -ForegroundColor Cyan
+=== INSTALANDO SADTALKER Y WAV2LIP ===
+PS C:\Windows\system32> # Instalar Python 3.8 si falta
+PS C:\Windows\system32> $Py38 = py -3.8 -c "import sys; print(sys.executable)" 2>$null
+py : No suitable Python runtime found
+En línea: 1 Carácter: 9
++ $Py38 = py -3.8 -c "import sys; print(sys.executable)" 2>$null
++         ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (No suitable Python runtime found:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+Pass --list (-0) to see all detected environments on your machine
+or set environment variable PYLAUNCHER_ALLOW_INSTALL to use winget
+or open the Microsoft Store to the requested version.
+PS C:\Windows\system32> if (!$Py38) {
+    winget install -e --id Python.Python.3.8 --accept-package-agreements --accept-source-agreements
+    $Py38 = py -3.8 -c "import sys; print(sys.executable)" 2>$null
+}
+Encontrado Python 3.8 [Python.Python.3.8] Versión 3.8.10
+El propietario de esta aplicación le concede una licencia.
+Microsoft no es responsable, ni tampoco concede ninguna licencia de paquetes de terceros.
+Descargando https://www.python.org/ftp/python/3.8.10/python-3.8.10-amd64.exe
+  ██████████████████████████████  26.9 MB / 26.9 MB
+El hash del instalador se verificó correctamente
+Iniciando instalación de paquete...
+Instalado correctamente
+PS C:\Windows\system32> if (!$Py38) {
+    Write-Host "No se pudo instalar Python 3.8. SadTalker y Wav2Lip quedan pendientes." -ForegroundColor Yellow
+} else {
+
+    # SADTALKER
+    $S = "$R\SadTalker"
+    if ((Test-Path "$S\requirements.txt")) {
+        Write-Host "`n=== SADTALKER ===" -ForegroundColor Cyan
+
+        if (!(Test-Path "$S\.venv\Scripts\python.exe")) {
+            & $Py38 -m venv "$S\.venv"
+        }
+
+        $SP = "$S\.venv\Scripts\python.exe"
+        & $SP -m pip install --upgrade pip setuptools wheel
+        & $SP -m pip install torch==1.12.1+cpu torchvision==0.13.1+cpu torchaudio==0.12.1 --index-url https://download.pytorch.org/whl/cpu
+        & $SP -m pip install -r "$S\requirements.txt"
+        Write-Host "SadTalker dependencias: proceso terminado."
+    }
+
+    # WAV2LIP
+    $W = "$R\Wav2Lip"
+    if ((Test-Path "$W\requirements.txt")) {
+        Write-Host "`n=== WAV2LIP ===" -ForegroundColor Cyan
+
+        if (!(Test-Path "$W\.venv\Scripts\python.exe")) {
+            & $Py38 -m venv "$W\.venv"
+        }
+
+        $WP = "$W\.venv\Scripts\python.exe"
+        & $WP -m pip install --upgrade pip setuptools wheel
+        & $WP -m pip install torch==1.12.1+cpu torchvision==0.13.1+cpu torchaudio==0.12.1 --index-url https://download.pytorch.org/whl/cpu
+        & $WP -m pip install -r "$W\requirements.txt"
+        Write-Host "Wav2Lip dependencias: proceso terminado."
+    }
+}
+
+=== SADTALKER ===
+
+Requirement already satisfied: pip in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (21.1.1)
+Collecting pip
+  Downloading pip-25.0.1-py3-none-any.whl (1.8 MB)
+     |████████████████████████████████| 1.8 MB 2.2 MB/s
+Requirement already satisfied: setuptools in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (56.0.0)
+Collecting setuptools
+  Downloading setuptools-75.3.4-py3-none-any.whl (1.3 MB)
+     |████████████████████████████████| 1.3 MB 6.8 MB/s
+Collecting wheel
+  Downloading wheel-0.45.1-py3-none-any.whl (72 kB)
+     |████████████████████████████████| 72 kB 5.1 MB/s
+Installing collected packages: wheel, setuptools, pip
+  Attempting uninstall: setuptools
+    Found existing installation: setuptools 56.0.0
+    Uninstalling setuptools-56.0.0:
+      Successfully uninstalled setuptools-56.0.0
+  Attempting uninstall: pip
+    Found existing installation: pip 21.1.1
+    Uninstalling pip-21.1.1:
+      Successfully uninstalled pip-21.1.1
+Successfully installed pip-25.0.1 setuptools-75.3.4 wheel-0.45.1
+Looking in indexes: https://download.pytorch.org/whl/cpu
+Collecting torch==1.12.1+cpu
+  Downloading https://download-r2.pytorch.org/whl/cpu/torch-1.12.1%2Bcpu-cp38-cp38-win_amd64.whl (161.4 MB)
+     ---------------------------------------- 161.4/161.4 MB 3.4 MB/s eta 0:00:00
+Collecting torchvision==0.13.1+cpu
+  Downloading https://download-r2.pytorch.org/whl/cpu/torchvision-0.13.1%2Bcpu-cp38-cp38-win_amd64.whl (1.1 MB)
+     ---------------------------------------- 1.1/1.1 MB 3.2 MB/s eta 0:00:00
+Collecting torchaudio==0.12.1
+  Downloading https://download-r2.pytorch.org/whl/cpu/torchaudio-0.12.1%2Bcpu-cp38-cp38-win_amd64.whl (955 kB)
+     ---------------------------------------- 955.2/955.2 kB 3.2 MB/s eta 0:00:00
+Collecting typing-extensions (from torch==1.12.1+cpu)
+  Downloading typing_extensions-4.13.2-py3-none-any.whl.metadata (3.0 kB)
+Collecting numpy (from torchvision==0.13.1+cpu)
+  Downloading numpy-1.24.4-cp38-cp38-win_amd64.whl.metadata (5.6 kB)
+Collecting requests (from torchvision==0.13.1+cpu)
+  Downloading https://download.pytorch.org/whl/requests-2.28.1-py3-none-any.whl (62 kB)
+Collecting pillow!=8.3.*,>=5.3.0 (from torchvision==0.13.1+cpu)
+  Downloading pillow-10.4.0-cp38-cp38-win_amd64.whl.metadata (9.3 kB)
+Collecting charset-normalizer<3,>=2 (from requests->torchvision==0.13.1+cpu)
+  Downloading https://download.pytorch.org/whl/charset_normalizer-2.1.1-py3-none-any.whl (39 kB)
+Collecting idna<4,>=2.5 (from requests->torchvision==0.13.1+cpu)
+  Downloading https://download.pytorch.org/whl/idna-3.4-py3-none-any.whl (61 kB)
+Collecting urllib3<1.27,>=1.21.1 (from requests->torchvision==0.13.1+cpu)
+  Downloading https://download.pytorch.org/whl/urllib3-1.26.13-py2.py3-none-any.whl (140 kB)
+Collecting certifi>=2017.4.17 (from requests->torchvision==0.13.1+cpu)
+  Downloading https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl (155 kB)
+Downloading pillow-10.4.0-cp38-cp38-win_amd64.whl (2.6 MB)
+   ---------------------------------------- 2.6/2.6 MB 4.0 MB/s eta 0:00:00
+Downloading numpy-1.24.4-cp38-cp38-win_amd64.whl (14.9 MB)
+   ---------------------------------------- 14.9/14.9 MB 2.6 MB/s eta 0:00:00
+Downloading typing_extensions-4.13.2-py3-none-any.whl (45 kB)
+Installing collected packages: urllib3, typing-extensions, pillow, numpy, idna, charset-normalizer, certifi, torch, requ
+ests, torchvision, torchaudio
+Successfully installed certifi-2022.12.7 charset-normalizer-2.1.1 idna-3.4 numpy-1.24.4 pillow-10.4.0 requests-2.28.1 to
+rch-1.12.1+cpu torchaudio-0.12.1+cpu torchvision-0.13.1+cpu typing-extensions-4.13.2 urllib3-1.26.13
+Collecting numpy==1.23.4 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 1))
+  Downloading numpy-1.23.4-cp38-cp38-win_amd64.whl.metadata (2.3 kB)
+Collecting face_alignment==1.3.5 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 2))
+  Downloading face_alignment-1.3.5-py2.py3-none-any.whl.metadata (6.6 kB)
+Collecting imageio==2.19.3 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 3))
+  Downloading imageio-2.19.3-py3-none-any.whl.metadata (4.9 kB)
+Collecting imageio-ffmpeg==0.4.7 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 4))
+  Downloading imageio_ffmpeg-0.4.7-py3-none-win_amd64.whl.metadata (1.6 kB)
+Collecting librosa==0.9.2 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Downloading librosa-0.9.2-py3-none-any.whl.metadata (8.2 kB)
+Collecting numba (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 6))
+  Downloading numba-0.58.1-cp38-cp38-win_amd64.whl.metadata (2.8 kB)
+Collecting resampy==0.3.1 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 7))
+  Downloading resampy-0.3.1-py3-none-any.whl.metadata (2.8 kB)
+Collecting pydub==0.25.1 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 8))
+  Using cached pydub-0.25.1-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting scipy==1.10.1 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 9))
+  Downloading scipy-1.10.1-cp38-cp38-win_amd64.whl.metadata (58 kB)
+Collecting kornia==0.6.8 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 10))
+  Downloading kornia-0.6.8-py2.py3-none-any.whl.metadata (12 kB)
+Collecting tqdm (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 11))
+  Using cached tqdm-4.70.1-py3-none-any.whl.metadata (57 kB)
+Collecting yacs==0.1.8 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 12))
+  Downloading yacs-0.1.8-py3-none-any.whl.metadata (639 bytes)
+Collecting pyyaml (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 13))
+  Downloading PyYAML-6.0.3-cp38-cp38-win_amd64.whl.metadata (2.2 kB)
+Collecting joblib==1.1.0 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 14))
+  Downloading joblib-1.1.0-py2.py3-none-any.whl.metadata (5.2 kB)
+Collecting scikit-image==0.19.3 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 15))
+  Downloading scikit_image-0.19.3-cp38-cp38-win_amd64.whl.metadata (8.0 kB)
+Collecting basicsr==1.4.2 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading basicsr-1.4.2.tar.gz (172 kB)
+  Preparing metadata (setup.py) ... done
+Collecting facexlib==0.3.0 (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 17))
+  Downloading facexlib-0.3.0-py3-none-any.whl.metadata (4.6 kB)
+Collecting gradio (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading gradio-4.44.1-py3-none-any.whl.metadata (15 kB)
+Collecting gfpgan (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 19))
+  Downloading gfpgan-1.3.8-py3-none-any.whl.metadata (12 kB)
+Collecting av (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 20))
+  Downloading av-12.3.0-cp38-cp38-win_amd64.whl.metadata (4.7 kB)
+Collecting safetensors (from -r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 21))
+  Downloading safetensors-0.5.3-cp38-abi3-win_amd64.whl.metadata (3.9 kB)
+Requirement already satisfied: torch in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from face_alignment==1.3.5->
+-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 2)) (1.12.1+cpu)
+Collecting opencv-python (from face_alignment==1.3.5->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 2))
+  Using cached opencv_python-5.0.0.93-cp37-abi3-win_amd64.whl.metadata (20 kB)
+Requirement already satisfied: pillow>=8.3.2 in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from imageio==2.19.3
+->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 3)) (10.4.0)
+Collecting audioread>=2.1.9 (from librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Downloading audioread-3.0.1-py3-none-any.whl.metadata (8.4 kB)
+Collecting scikit-learn>=0.19.1 (from librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Downloading scikit_learn-1.3.2-cp38-cp38-win_amd64.whl.metadata (11 kB)
+Collecting decorator>=4.0.10 (from librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Using cached decorator-5.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting soundfile>=0.10.2 (from librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Downloading soundfile-0.13.1-py2.py3-none-win_amd64.whl.metadata (16 kB)
+Collecting pooch>=1.0 (from librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Downloading pooch-1.8.2-py3-none-any.whl.metadata (10 kB)
+Collecting packaging>=20.0 (from librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Downloading packaging-26.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting networkx>=2.2 (from scikit-image==0.19.3->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 15))
+  Downloading networkx-3.1-py3-none-any.whl.metadata (5.3 kB)
+Collecting tifffile>=2019.7.26 (from scikit-image==0.19.3->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 15))
+  Downloading tifffile-2023.7.10-py3-none-any.whl.metadata (31 kB)
+Collecting PyWavelets>=1.1.1 (from scikit-image==0.19.3->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 15))
+  Downloading PyWavelets-1.4.1-cp38-cp38-win_amd64.whl.metadata (1.9 kB)
+Collecting addict (from basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Using cached addict-2.4.0-py3-none-any.whl.metadata (1.0 kB)
+Collecting future (from basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Using cached future-1.0.0-py3-none-any.whl.metadata (4.0 kB)
+Collecting lmdb (from basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading lmdb-2.1.1.tar.gz (913 kB)
+     ---------------------------------------- 913.2/913.2 kB 4.2 MB/s eta 0:00:00
+  Installing build dependencies ... done
+  Getting requirements to build wheel ... done
+  Preparing metadata (pyproject.toml) ... done
+Requirement already satisfied: requests in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from basicsr==1.4.2->-r C
+:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16)) (2.28.1)
+Collecting tb-nightly (from basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading tb_nightly-2.14.0a20230808-py3-none-any.whl.metadata (1.8 kB)
+Requirement already satisfied: torchvision in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from basicsr==1.4.2->-
+r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16)) (0.13.1+cpu)
+Collecting yapf (from basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading yapf-0.43.0-py3-none-any.whl.metadata (46 kB)
+Collecting filterpy (from facexlib==0.3.0->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 17))
+  Downloading filterpy-2.0.0-py3-none-any.whl.metadata (12 kB)
+Collecting llvmlite<0.42,>=0.41.0dev0 (from numba->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 6))
+  Downloading llvmlite-0.41.1-cp38-cp38-win_amd64.whl.metadata (4.9 kB)
+Collecting importlib-metadata (from numba->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 6))
+  Downloading importlib_metadata-8.5.0-py3-none-any.whl.metadata (4.8 kB)
+Collecting colorama (from tqdm->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 11))
+  Using cached colorama-0.4.6-py2.py3-none-any.whl.metadata (17 kB)
+Collecting aiofiles<24.0,>=22.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached aiofiles-23.2.1-py3-none-any.whl.metadata (9.7 kB)
+Collecting anyio<5.0,>=3.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading anyio-4.5.2-py3-none-any.whl.metadata (4.7 kB)
+Collecting fastapi<1.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading fastapi-0.124.4-py3-none-any.whl.metadata (30 kB)
+Collecting ffmpy (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading ffmpy-0.5.0-py3-none-any.whl.metadata (3.0 kB)
+Collecting gradio-client==1.3.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading gradio_client-1.3.0-py3-none-any.whl.metadata (7.1 kB)
+Collecting httpx>=0.24.1 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached httpx-0.28.1-py3-none-any.whl.metadata (7.1 kB)
+Collecting huggingface-hub>=0.19.3 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached huggingface_hub-0.36.2-py3-none-any.whl.metadata (15 kB)
+Collecting importlib-resources<7.0,>=1.3 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading importlib_resources-6.4.5-py3-none-any.whl.metadata (4.0 kB)
+Collecting jinja2<4.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached jinja2-3.1.6-py3-none-any.whl.metadata (2.9 kB)
+Collecting markupsafe~=2.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading MarkupSafe-2.1.5-cp38-cp38-win_amd64.whl.metadata (3.1 kB)
+Collecting matplotlib~=3.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading matplotlib-3.7.5-cp38-cp38-win_amd64.whl.metadata (5.8 kB)
+Collecting orjson~=3.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading orjson-3.10.15-cp38-cp38-win_amd64.whl.metadata (42 kB)
+Collecting pandas<3.0,>=1.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading pandas-2.0.3-cp38-cp38-win_amd64.whl.metadata (18 kB)
+Collecting pydantic>=2.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading pydantic-2.10.6-py3-none-any.whl.metadata (30 kB)
+Collecting python-multipart>=0.0.9 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached python_multipart-0.0.20-py3-none-any.whl.metadata (1.8 kB)
+Collecting ruff>=0.2.2 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached ruff-0.17.4-py3-none-win_amd64.whl.metadata (21 kB)
+Collecting semantic-version~=2.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached semantic_version-2.10.0-py2.py3-none-any.whl.metadata (9.7 kB)
+Collecting tomlkit==0.12.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached tomlkit-0.12.0-py3-none-any.whl.metadata (2.7 kB)
+Collecting typer<1.0,>=0.12 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading typer-0.20.1-py3-none-any.whl.metadata (16 kB)
+Requirement already satisfied: typing-extensions~=4.0 in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from gradio
+->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18)) (4.13.2)
+Collecting urllib3~=2.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading urllib3-2.2.3-py3-none-any.whl.metadata (6.5 kB)
+Collecting uvicorn>=0.14.0 (from gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading uvicorn-0.33.0-py3-none-any.whl.metadata (6.6 kB)
+Collecting fsspec (from gradio-client==1.3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading fsspec-2025.3.0-py3-none-any.whl.metadata (11 kB)
+Collecting websockets<13.0,>=10.0 (from gradio-client==1.3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (li
+ne 18))
+  Downloading websockets-12.0-cp38-cp38-win_amd64.whl.metadata (6.8 kB)
+Requirement already satisfied: idna>=2.8 in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from anyio<5.0,>=3.0->gr
+adio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18)) (3.4)
+Collecting sniffio>=1.1 (from anyio<5.0,>=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached sniffio-1.3.1-py3-none-any.whl.metadata (3.9 kB)
+Collecting exceptiongroup>=1.0.2 (from anyio<5.0,>=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18)
+)
+  Using cached exceptiongroup-1.3.1-py3-none-any.whl.metadata (6.7 kB)
+Collecting starlette<0.51.0,>=0.40.0 (from fastapi<1.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18)
+)
+  Downloading starlette-0.44.0-py3-none-any.whl.metadata (6.3 kB)
+Collecting annotated-doc>=0.0.2 (from fastapi<1.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading annotated_doc-0.0.4-py3-none-any.whl.metadata (6.6 kB)
+Requirement already satisfied: certifi in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from httpx>=0.24.1->gradio
+->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18)) (2022.12.7)
+Collecting httpcore==1.* (from httpx>=0.24.1->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached httpcore-1.0.9-py3-none-any.whl.metadata (21 kB)
+Collecting h11>=0.16 (from httpcore==1.*->httpx>=0.24.1->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18
+))
+  Using cached h11-0.16.0-py3-none-any.whl.metadata (8.3 kB)
+Collecting filelock (from huggingface-hub>=0.19.3->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading filelock-3.16.1-py3-none-any.whl.metadata (2.9 kB)
+Collecting zipp>=3.1.0 (from importlib-resources<7.0,>=1.3->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line
+ 18))
+  Downloading zipp-3.20.2-py3-none-any.whl.metadata (3.7 kB)
+Collecting contourpy>=1.0.1 (from matplotlib~=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading contourpy-1.1.1-cp38-cp38-win_amd64.whl.metadata (5.9 kB)
+Collecting cycler>=0.10 (from matplotlib~=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached cycler-0.12.1-py3-none-any.whl.metadata (3.8 kB)
+Collecting fonttools>=4.22.0 (from matplotlib~=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading fonttools-4.57.0-cp38-cp38-win_amd64.whl.metadata (104 kB)
+Collecting kiwisolver>=1.0.1 (from matplotlib~=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading kiwisolver-1.4.7-cp38-cp38-win_amd64.whl.metadata (6.4 kB)
+Collecting pyparsing>=2.3.1 (from matplotlib~=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading pyparsing-3.1.4-py3-none-any.whl.metadata (5.1 kB)
+Collecting python-dateutil>=2.7 (from matplotlib~=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+
+  Using cached python_dateutil-3.0.0-py2.py3-none-any.whl.metadata (8.2 kB)
+Collecting pytz>=2020.1 (from pandas<3.0,>=1.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached pytz-2026.6-py2.py3-none-any.whl.metadata (22 kB)
+Collecting tzdata>=2022.1 (from pandas<3.0,>=1.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached tzdata-2026.6-py2.py3-none-any.whl.metadata (1.4 kB)
+Collecting platformdirs>=2.5.0 (from pooch>=1.0->librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5)
+)
+  Downloading platformdirs-4.3.6-py3-none-any.whl.metadata (11 kB)
+Collecting annotated-types>=0.6.0 (from pydantic>=2.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+
+  Downloading annotated_types-0.7.0-py3-none-any.whl.metadata (15 kB)
+Collecting pydantic-core==2.27.2 (from pydantic>=2.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading pydantic_core-2.27.2-cp38-cp38-win_amd64.whl.metadata (6.7 kB)
+Requirement already satisfied: charset-normalizer<3,>=2 in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from requ
+ests->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16)) (2.1.1)
+INFO: pip is looking at multiple versions of requests to determine which version is compatible with other requirements.
+This could take a while.
+Collecting requests (from basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading requests-2.32.4-py3-none-any.whl.metadata (4.9 kB)
+INFO: pip is looking at multiple versions of scikit-learn to determine which version is compatible with other requiremen
+ts. This could take a while.
+Collecting scikit-learn>=0.19.1 (from librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Downloading scikit_learn-1.3.1-cp38-cp38-win_amd64.whl.metadata (11 kB)
+  Downloading scikit_learn-1.3.0-cp38-cp38-win_amd64.whl.metadata (11 kB)
+  Downloading scikit_learn-1.2.2-cp38-cp38-win_amd64.whl.metadata (11 kB)
+  Downloading scikit_learn-1.2.1-cp38-cp38-win_amd64.whl.metadata (11 kB)
+  Downloading scikit_learn-1.2.0-cp38-cp38-win_amd64.whl.metadata (11 kB)
+  Downloading scikit_learn-1.1.3-cp38-cp38-win_amd64.whl.metadata (10 kB)
+Collecting threadpoolctl>=2.0.0 (from scikit-learn>=0.19.1->librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.t
+xt (line 5))
+  Downloading threadpoolctl-3.5.0-py3-none-any.whl.metadata (13 kB)
+Collecting cffi>=1.0 (from soundfile>=0.10.2->librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 5))
+  Using cached cffi-1.17.1-cp38-cp38-win_amd64.whl.metadata (1.6 kB)
+Collecting click>=8.0.0 (from typer<1.0,>=0.12->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading click-8.1.8-py3-none-any.whl.metadata (2.3 kB)
+Collecting shellingham>=1.3.0 (from typer<1.0,>=0.12->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Using cached shellingham-1.5.4-py2.py3-none-any.whl.metadata (3.5 kB)
+Collecting rich>=10.11.0 (from typer<1.0,>=0.12->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 18))
+  Downloading rich-14.3.4-py3-none-any.whl.metadata (18 kB)
+Collecting absl-py>=0.4 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading absl_py-2.3.1-py3-none-any.whl.metadata (3.3 kB)
+Collecting grpcio>=1.48.2 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading grpcio-1.70.0-cp38-cp38-win_amd64.whl.metadata (4.0 kB)
+Collecting google-auth<3,>=1.6.3 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line
+16))
+  Downloading google_auth-2.50.0-py3-none-any.whl.metadata (6.2 kB)
+Collecting google-auth-oauthlib<1.1,>=0.5 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.t
+xt (line 16))
+  Downloading google_auth_oauthlib-1.0.0-py2.py3-none-any.whl.metadata (2.7 kB)
+Collecting markdown>=2.6.8 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading Markdown-3.7-py3-none-any.whl.metadata (7.0 kB)
+Collecting protobuf>=3.19.6 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading protobuf-5.29.6-cp38-cp38-win_amd64.whl.metadata (592 bytes)
+Requirement already satisfied: setuptools>=41.0.0 in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from tb-nightly
+->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16)) (75.3.4)
+Collecting tensorboard-data-server<0.8.0,>=0.7.0 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\require
+ments.txt (line 16))
+  Downloading tensorboard_data_server-0.7.2-py3-none-any.whl.metadata (1.1 kB)
+Collecting werkzeug>=1.0.1 (from tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading werkzeug-3.0.6-py3-none-any.whl.metadata (3.7 kB)
+Requirement already satisfied: wheel>=0.26 in c:\ai_ugc_studio\sadtalker\.venv\lib\site-packages (from tb-nightly->basic
+sr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16)) (0.45.1)
+Collecting tomli>=2.0.1 (from yapf->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading tomli-2.5.0-py3-none-any.whl.metadata (10 kB)
+Collecting pycparser (from cffi>=1.0->soundfile>=0.10.2->librosa==0.9.2->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt
+(line 5))
+  Using cached pycparser-2.23-py3-none-any.whl.metadata (993 bytes)
+Collecting pyasn1-modules>=0.2.1 (from google-auth<3,>=1.6.3->tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\
+requirements.txt (line 16))
+  Using cached pyasn1_modules-0.4.2-py3-none-any.whl.metadata (3.5 kB)
+Collecting cryptography>=38.0.3 (from google-auth<3,>=1.6.3->tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDIO\SadTalker\r
+equirements.txt (line 16))
+  Downloading cryptography-47.0.0-cp38-abi3-win_amd64.whl.metadata (4.5 kB)
+Collecting requests-oauthlib>=0.7.0 (from google-auth-oauthlib<1.1,>=0.5->tb-nightly->basicsr==1.4.2->-r C:\AI_UGC_STUDI
+O\SadTalker\requirements.txt (line 16))
+  Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl.metadata (11 kB)
+Collecting six>=1.6 (from python-dateutil>=2.7->matplotlib~=3.0->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirements.txt
+(line 18))
+  Using cached six-1.17.0-py2.py3-none-any.whl.metadata (1.7 kB)
+Collecting markdown-it-py>=2.2.0 (from rich>=10.11.0->typer<1.0,>=0.12->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requiremen
+ts.txt (line 18))
+  Downloading markdown_it_py-3.0.0-py3-none-any.whl.metadata (6.9 kB)
+Collecting pygments<3.0.0,>=2.13.0 (from rich>=10.11.0->typer<1.0,>=0.12->gradio->-r C:\AI_UGC_STUDIO\SadTalker\requirem
+ents.txt (line 18))
+  Downloading pygments-2.19.2-py3-none-any.whl.metadata (2.5 kB)
+Collecting mdurl~=0.1 (from markdown-it-py>=2.2.0->rich>=10.11.0->typer<1.0,>=0.12->gradio->-r C:\AI_UGC_STUDIO\SadTalke
+r\requirements.txt (line 18))
+  Using cached mdurl-0.1.2-py3-none-any.whl.metadata (1.6 kB)
+Collecting pyasn1<0.7.0,>=0.6.1 (from pyasn1-modules>=0.2.1->google-auth<3,>=1.6.3->tb-nightly->basicsr==1.4.2->-r C:\AI
+_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading pyasn1-0.6.5-py3-none-any.whl.metadata (8.4 kB)
+Collecting oauthlib>=3.0.0 (from requests-oauthlib>=0.7.0->google-auth-oauthlib<1.1,>=0.5->tb-nightly->basicsr==1.4.2->-
+r C:\AI_UGC_STUDIO\SadTalker\requirements.txt (line 16))
+  Downloading oauthlib-3.3.1-py3-none-any.whl.metadata (7.9 kB)
+Downloading numpy-1.23.4-cp38-cp38-win_amd64.whl (14.7 MB)
+   ---------------------------------------- 14.7/14.7 MB 3.0 MB/s eta 0:00:00
+Downloading face_alignment-1.3.5-py2.py3-none-any.whl (29 kB)
+Downloading imageio-2.19.3-py3-none-any.whl (3.4 MB)
+   ---------------------------------------- 3.4/3.4 MB 3.6 MB/s eta 0:00:00
+Downloading imageio_ffmpeg-0.4.7-py3-none-win_amd64.whl (22.6 MB)
+   ---------------------------------------- 22.6/22.6 MB 3.0 MB/s eta 0:00:00
+Downloading librosa-0.9.2-py3-none-any.whl (214 kB)
+Downloading resampy-0.3.1-py3-none-any.whl (3.1 MB)
+   ---------------------------------------- 3.1/3.1 MB 3.1 MB/s eta 0:00:00
+Using cached pydub-0.25.1-py2.py3-none-any.whl (32 kB)
+Downloading scipy-1.10.1-cp38-cp38-win_amd64.whl (42.2 MB)
+   ---------------------------------------- 42.2/42.2 MB 3.3 MB/s eta 0:00:00
+Downloading kornia-0.6.8-py2.py3-none-any.whl (551 kB)
+   ---------------------------------------- 551.1/551.1 kB 3.7 MB/s eta 0:00:00
+Downloading yacs-0.1.8-py3-none-any.whl (14 kB)
+Downloading joblib-1.1.0-py2.py3-none-any.whl (306 kB)
+Downloading scikit_image-0.19.3-cp38-cp38-win_amd64.whl (12.2 MB)
+   ---------------------------------------- 12.2/12.2 MB 3.0 MB/s eta 0:00:00
+Downloading facexlib-0.3.0-py3-none-any.whl (59 kB)
+Downloading numba-0.58.1-cp38-cp38-win_amd64.whl (2.6 MB)
+   ---------------------------------------- 2.6/2.6 MB 3.2 MB/s eta 0:00:00
+Using cached tqdm-4.70.1-py3-none-any.whl (80 kB)
+Downloading PyYAML-6.0.3-cp38-cp38-win_amd64.whl (160 kB)
+Downloading gradio-4.44.1-py3-none-any.whl (18.1 MB)
+   ---------------------------------------- 18.1/18.1 MB 3.6 MB/s eta 0:00:00
+Downloading gradio_client-1.3.0-py3-none-any.whl (318 kB)
+Using cached tomlkit-0.12.0-py3-none-any.whl (37 kB)
+Downloading gfpgan-1.3.8-py3-none-any.whl (52 kB)
+Downloading av-12.3.0-cp38-cp38-win_amd64.whl (26.0 MB)
+   ---------------------------------------- 26.0/26.0 MB 3.5 MB/s eta 0:00:00
+Downloading safetensors-0.5.3-cp38-abi3-win_amd64.whl (308 kB)
+Using cached aiofiles-23.2.1-py3-none-any.whl (15 kB)
+Downloading anyio-4.5.2-py3-none-any.whl (89 kB)
+Downloading audioread-3.0.1-py3-none-any.whl (23 kB)
+Using cached decorator-5.3.1-py3-none-any.whl (10 kB)
+Downloading fastapi-0.124.4-py3-none-any.whl (113 kB)
+Using cached httpx-0.28.1-py3-none-any.whl (73 kB)
+Using cached httpcore-1.0.9-py3-none-any.whl (78 kB)
+Using cached huggingface_hub-0.36.2-py3-none-any.whl (566 kB)
+Downloading importlib_resources-6.4.5-py3-none-any.whl (36 kB)
+Using cached jinja2-3.1.6-py3-none-any.whl (134 kB)
+Downloading llvmlite-0.41.1-cp38-cp38-win_amd64.whl (28.1 MB)
+   ---------------------------------------- 28.1/28.1 MB 1.9 MB/s eta 0:00:00
+Downloading MarkupSafe-2.1.5-cp38-cp38-win_amd64.whl (17 kB)
+Downloading matplotlib-3.7.5-cp38-cp38-win_amd64.whl (7.5 MB)
+   ---------------------------------------- 7.5/7.5 MB 2.8 MB/s eta 0:00:00
+Downloading networkx-3.1-py3-none-any.whl (2.1 MB)
+   ---------------------------------------- 2.1/2.1 MB 3.0 MB/s eta 0:00:00
+Downloading orjson-3.10.15-cp38-cp38-win_amd64.whl (133 kB)
+Downloading packaging-26.2-py3-none-any.whl (100 kB)
+Downloading pandas-2.0.3-cp38-cp38-win_amd64.whl (10.8 MB)
+   ---------------------------------------- 10.8/10.8 MB 2.7 MB/s eta 0:00:00
+Downloading pooch-1.8.2-py3-none-any.whl (64 kB)
+Downloading pydantic-2.10.6-py3-none-any.whl (431 kB)
+Downloading pydantic_core-2.27.2-cp38-cp38-win_amd64.whl (2.0 MB)
+   ---------------------------------------- 2.0/2.0 MB 3.1 MB/s eta 0:00:00
+Using cached python_multipart-0.0.20-py3-none-any.whl (24 kB)
+Downloading PyWavelets-1.4.1-cp38-cp38-win_amd64.whl (4.2 MB)
+   ---------------------------------------- 4.2/4.2 MB 2.9 MB/s eta 0:00:00
+Downloading requests-2.32.4-py3-none-any.whl (64 kB)
+Using cached ruff-0.17.4-py3-none-win_amd64.whl (10.3 MB)
+Downloading scikit_learn-1.1.3-cp38-cp38-win_amd64.whl (7.5 MB)
+   ---------------------------------------- 7.5/7.5 MB 3.2 MB/s eta 0:00:00
+Using cached semantic_version-2.10.0-py2.py3-none-any.whl (15 kB)
+Downloading soundfile-0.13.1-py2.py3-none-win_amd64.whl (1.0 MB)
+   ---------------------------------------- 1.0/1.0 MB 3.2 MB/s eta 0:00:00
+Downloading tifffile-2023.7.10-py3-none-any.whl (220 kB)
+Downloading typer-0.20.1-py3-none-any.whl (47 kB)
+Downloading urllib3-2.2.3-py3-none-any.whl (126 kB)
+Downloading uvicorn-0.33.0-py3-none-any.whl (62 kB)
+Using cached addict-2.4.0-py3-none-any.whl (3.8 kB)
+Using cached colorama-0.4.6-py2.py3-none-any.whl (25 kB)
+Downloading ffmpy-0.5.0-py3-none-any.whl (6.0 kB)
+Downloading filterpy-2.0.0-py3-none-any.whl (111 kB)
+Using cached future-1.0.0-py3-none-any.whl (491 kB)
+Downloading importlib_metadata-8.5.0-py3-none-any.whl (26 kB)
+Using cached opencv_python-5.0.0.93-cp37-abi3-win_amd64.whl (44.0 MB)
+Downloading tb_nightly-2.14.0a20230808-py3-none-any.whl (5.5 MB)
+   ---------------------------------------- 5.5/5.5 MB 2.1 MB/s eta 0:00:00
+Downloading yapf-0.43.0-py3-none-any.whl (256 kB)
+Downloading absl_py-2.3.1-py3-none-any.whl (135 kB)
+Downloading annotated_doc-0.0.4-py3-none-any.whl (5.3 kB)
+Downloading annotated_types-0.7.0-py3-none-any.whl (13 kB)
+Using cached cffi-1.17.1-cp38-cp38-win_amd64.whl (181 kB)
+Downloading click-8.1.8-py3-none-any.whl (98 kB)
+Downloading contourpy-1.1.1-cp38-cp38-win_amd64.whl (477 kB)
+Using cached cycler-0.12.1-py3-none-any.whl (8.3 kB)
+Using cached exceptiongroup-1.3.1-py3-none-any.whl (16 kB)
+Downloading fonttools-4.57.0-cp38-cp38-win_amd64.whl (1.5 MB)
+   ---------------------------------------- 1.5/1.5 MB 2.5 MB/s eta 0:00:00
+Downloading fsspec-2025.3.0-py3-none-any.whl (193 kB)
+Downloading google_auth-2.50.0-py3-none-any.whl (246 kB)
+Downloading google_auth_oauthlib-1.0.0-py2.py3-none-any.whl (18 kB)
+Downloading grpcio-1.70.0-cp38-cp38-win_amd64.whl (4.3 MB)
+   ---------------------------------------- 4.3/4.3 MB 2.8 MB/s eta 0:00:00
+Using cached h11-0.16.0-py3-none-any.whl (37 kB)
+Downloading kiwisolver-1.4.7-cp38-cp38-win_amd64.whl (55 kB)
+Downloading Markdown-3.7-py3-none-any.whl (106 kB)
+Downloading platformdirs-4.3.6-py3-none-any.whl (18 kB)
+Downloading protobuf-5.29.6-cp38-cp38-win_amd64.whl (435 kB)
+Downloading pyparsing-3.1.4-py3-none-any.whl (104 kB)
+Using cached python_dateutil-3.0.0-py2.py3-none-any.whl (94 kB)
+Using cached pytz-2026.6-py2.py3-none-any.whl (506 kB)
+Downloading rich-14.3.4-py3-none-any.whl (310 kB)
+Using cached shellingham-1.5.4-py2.py3-none-any.whl (9.8 kB)
+Using cached sniffio-1.3.1-py3-none-any.whl (10 kB)
+Downloading starlette-0.44.0-py3-none-any.whl (73 kB)
+Downloading tensorboard_data_server-0.7.2-py3-none-any.whl (2.4 kB)
+Downloading threadpoolctl-3.5.0-py3-none-any.whl (18 kB)
+Downloading tomli-2.5.0-py3-none-any.whl (14 kB)
+Using cached tzdata-2026.6-py2.py3-none-any.whl (348 kB)
+Downloading websockets-12.0-cp38-cp38-win_amd64.whl (124 kB)
+Downloading werkzeug-3.0.6-py3-none-any.whl (227 kB)
+Downloading zipp-3.20.2-py3-none-any.whl (9.2 kB)
+Downloading filelock-3.16.1-py3-none-any.whl (16 kB)
+Downloading cryptography-47.0.0-cp38-abi3-win_amd64.whl (3.8 MB)
+   ---------------------------------------- 3.8/3.8 MB 3.2 MB/s eta 0:00:00
+Downloading markdown_it_py-3.0.0-py3-none-any.whl (87 kB)
+Using cached pyasn1_modules-0.4.2-py3-none-any.whl (181 kB)
+Downloading pygments-2.19.2-py3-none-any.whl (1.2 MB)
+   ---------------------------------------- 1.2/1.2 MB 3.4 MB/s eta 0:00:00
+Downloading requests_oauthlib-2.0.0-py2.py3-none-any.whl (24 kB)
+Using cached six-1.17.0-py2.py3-none-any.whl (11 kB)
+Using cached pycparser-2.23-py3-none-any.whl (118 kB)
+Using cached mdurl-0.1.2-py3-none-any.whl (10.0 kB)
+Downloading oauthlib-3.3.1-py3-none-any.whl (160 kB)
+Downloading pyasn1-0.6.5-py3-none-any.whl (84 kB)
+Building wheels for collected packages: basicsr, lmdb
+  Building wheel for basicsr (setup.py) ... done
+  Created wheel for basicsr: filename=basicsr-1.4.2-py3-none-any.whl size=214849 sha256=e4764e86d256da40f0752de854767d99
+55794c2cfc3292d28953ee0028fa147f
+  Stored in directory: c:\users\josep\appdata\local\pip\cache\wheels\4d\d3\95\e17d0bcdd7dcfb0dbf79db006711e434c42036efbf
+6695ef7f
+  Building wheel for lmdb (pyproject.toml) ... error
+  error: subprocess-exited-with-error
+
+  × Building wheel for lmdb (pyproject.toml) did not run successfully.
+  │ exit code: 1
+  ╰─> [16 lines of output]
+      py-lmdb: Using bundled liblmdb with py-lmdb patches; override with LMDB_FORCE_SYSTEM=1 or LMDB_PURE=1.
+      py-lmdb: Using CPython extension; override with LMDB_FORCE_CFFI=1.
+      running bdist_wheel
+      running build
+      running build_py
+      creating build\lib.win-amd64-cpython-38\lmdb
+      copying lmdb\cffi.py -> build\lib.win-amd64-cpython-38\lmdb
+      copying lmdb\tool.py -> build\lib.win-amd64-cpython-38\lmdb
+      copying lmdb\_config.py -> build\lib.win-amd64-cpython-38\lmdb
+      copying lmdb\__init__.py -> build\lib.win-amd64-cpython-38\lmdb
+      copying lmdb\__main__.py -> build\lib.win-amd64-cpython-38\lmdb
+      copying lmdb\__init__.pyi -> build\lib.win-amd64-cpython-38\lmdb
+      copying lmdb\py.typed -> build\lib.win-amd64-cpython-38\lmdb
+      running build_ext
+      building 'cpython' extension
+      error: Microsoft Visual C++ 14.0 or greater is required. Get it with "Microsoft C++ Build Tools": https://visualst
+udio.microsoft.com/visual-cpp-build-tools/
+      [end of output]
+
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+  ERROR: Failed building wheel for lmdb
+Successfully built basicsr
+Failed to build lmdb
+ERROR: Failed to build installable wheels for some pyproject.toml based projects (lmdb)
+SadTalker dependencias: proceso terminado.
+
+=== WAV2LIP ===
+
+Requirement already satisfied: pip in c:\ai_ugc_studio\wav2lip\.venv\lib\site-packages (21.1.1)
+Collecting pip
+  Using cached pip-25.0.1-py3-none-any.whl (1.8 MB)
+Requirement already satisfied: setuptools in c:\ai_ugc_studio\wav2lip\.venv\lib\site-packages (56.0.0)
+Collecting setuptools
+  Using cached setuptools-75.3.4-py3-none-any.whl (1.3 MB)
+Collecting wheel
+  Using cached wheel-0.45.1-py3-none-any.whl (72 kB)
+Installing collected packages: wheel, setuptools, pip
+  Attempting uninstall: setuptools
+    Found existing installation: setuptools 56.0.0
+    Uninstalling setuptools-56.0.0:
+      Successfully uninstalled setuptools-56.0.0
+  Attempting uninstall: pip
+    Found existing installation: pip 21.1.1
+    Uninstalling pip-21.1.1:
+      Successfully uninstalled pip-21.1.1
+Successfully installed pip-25.0.1 setuptools-75.3.4 wheel-0.45.1
+Looking in indexes: https://download.pytorch.org/whl/cpu
+Collecting torch==1.12.1+cpu
+  Using cached https://download-r2.pytorch.org/whl/cpu/torch-1.12.1%2Bcpu-cp38-cp38-win_amd64.whl (161.4 MB)
+Collecting torchvision==0.13.1+cpu
+  Using cached https://download-r2.pytorch.org/whl/cpu/torchvision-0.13.1%2Bcpu-cp38-cp38-win_amd64.whl (1.1 MB)
+Collecting torchaudio==0.12.1
+  Using cached https://download-r2.pytorch.org/whl/cpu/torchaudio-0.12.1%2Bcpu-cp38-cp38-win_amd64.whl (955 kB)
+Collecting typing-extensions (from torch==1.12.1+cpu)
+  Using cached typing_extensions-4.13.2-py3-none-any.whl.metadata (3.0 kB)
+Collecting numpy (from torchvision==0.13.1+cpu)
+  Using cached numpy-1.24.4-cp38-cp38-win_amd64.whl.metadata (5.6 kB)
+Collecting requests (from torchvision==0.13.1+cpu)
+  Using cached https://download.pytorch.org/whl/requests-2.28.1-py3-none-any.whl (62 kB)
+Collecting pillow!=8.3.*,>=5.3.0 (from torchvision==0.13.1+cpu)
+  Using cached pillow-10.4.0-cp38-cp38-win_amd64.whl.metadata (9.3 kB)
+Collecting charset-normalizer<3,>=2 (from requests->torchvision==0.13.1+cpu)
+  Using cached https://download.pytorch.org/whl/charset_normalizer-2.1.1-py3-none-any.whl (39 kB)
+Collecting idna<4,>=2.5 (from requests->torchvision==0.13.1+cpu)
+  Using cached https://download.pytorch.org/whl/idna-3.4-py3-none-any.whl (61 kB)
+Collecting urllib3<1.27,>=1.21.1 (from requests->torchvision==0.13.1+cpu)
+  Using cached https://download.pytorch.org/whl/urllib3-1.26.13-py2.py3-none-any.whl (140 kB)
+Collecting certifi>=2017.4.17 (from requests->torchvision==0.13.1+cpu)
+  Using cached https://download.pytorch.org/whl/certifi-2022.12.7-py3-none-any.whl (155 kB)
+Using cached pillow-10.4.0-cp38-cp38-win_amd64.whl (2.6 MB)
+Using cached numpy-1.24.4-cp38-cp38-win_amd64.whl (14.9 MB)
+Using cached typing_extensions-4.13.2-py3-none-any.whl (45 kB)
+Installing collected packages: urllib3, typing-extensions, pillow, numpy, idna, charset-normalizer, certifi, torch, requ
+ests, torchvision, torchaudio
+Successfully installed certifi-2022.12.7 charset-normalizer-2.1.1 idna-3.4 numpy-1.24.4 pillow-10.4.0 requests-2.28.1 to
+rch-1.12.1+cpu torchaudio-0.12.1+cpu torchvision-0.13.1+cpu typing-extensions-4.13.2 urllib3-1.26.13
+Collecting librosa==0.7.0 (from -r C:\AI_UGC_STUDIO\Wav2Lip\requirements.txt (line 1))
+  Downloading librosa-0.7.0.tar.gz (1.6 MB)
+     ---------------------------------------- 1.6/1.6 MB 3.5 MB/s eta 0:00:00
+  Preparing metadata (setup.py) ... done
+Collecting numpy==1.17.1 (from -r C:\AI_UGC_STUDIO\Wav2Lip\requirements.txt (line 2))
+  Downloading numpy-1.17.1.zip (6.5 MB)
+     ---------------------------------------- 6.5/6.5 MB 3.2 MB/s eta 0:00:00
+  Preparing metadata (setup.py) ... done
+Collecting opencv-contrib-python>=4.2.0.34 (from -r C:\AI_UGC_STUDIO\Wav2Lip\requirements.txt (line 3))
+  Downloading opencv_contrib_python-5.0.0.93-cp37-abi3-win_amd64.whl.metadata (20 kB)
+ERROR: Ignored the following yanked versions: 3.4.9.31, 3.4.10.35, 3.4.11.39, 3.4.17.61, 4.3.0.36, 4.4.0.42, 4.4.0.44, 4
+.5.4.58, 4.5.5.62, 4.7.0.68
+ERROR: Could not find a version that satisfies the requirement opencv-python==4.1.0.25 (from versions: 3.4.0.14, 3.4.8.2
+9, 3.4.9.33, 3.4.10.37, 3.4.11.41, 3.4.11.43, 3.4.11.45, 3.4.13.47, 3.4.14.51, 3.4.14.53, 3.4.15.55, 3.4.16.57, 3.4.16.5
+9, 3.4.17.63, 3.4.18.65, 4.1.2.30, 4.2.0.32, 4.2.0.34, 4.3.0.38, 4.4.0.40, 4.4.0.46, 4.5.1.48, 4.5.2.52, 4.5.2.54, 4.5.3
+.56, 4.5.4.60, 4.5.5.64, 4.6.0.66, 4.7.0.72, 4.8.0.74, 4.8.0.76, 4.8.1.78, 4.9.0.80, 4.10.0.82, 4.10.0.84, 4.11.0.86, 4.
+12.0.88, 4.13.0.90, 4.13.0.92, 4.14.0.94, 5.0.0.93)
+ERROR: No matching distribution found for opencv-python==4.1.0.25
+Wav2Lip dependencias: proceso terminado.
+PS C:\Windows\system32> # Verificación
+PS C:\Windows\system32> Write-Host "`n=== VERIFICACION FINAL ===" -ForegroundColor Cyan
+
+=== VERIFICACION FINAL ===
+PS C:\Windows\system32> foreach ($N in @("SadTalker","Wav2Lip","MuseTalk")) {
+    $V = "$R\$N\.venv\Scripts\python.exe"
+    Write-Host "$N : Entorno $(Test-Path $V)"
+}
+SadTalker : Entorno True
+Wav2Lip : Entorno True
+MuseTalk : Entorno False
+PS C:\Windows\system32> Write-Host "`nInforme: $Log"
+
+Informe: C:\AI_UGC_STUDIO\INSTALACION_RESTANTE.txt
+PS C:\Windows\system32> Write-Host "Los pesos de los modelos todavía deben verificarse."
+Los pesos de los modelos todavía deben verificarse.
+PS C:\Windows\system32> Write-Host "Wav2Lip original: uso comercial restringido; no usar en anuncios comerciales sin autorización."
+Wav2Lip original: uso comercial restringido; no usar en anuncios comerciales sin autorización.
+PS C:\Windows\system32> Stop-Transcript | Out-Null
+**********************
+Fin de la transcripción de Windows PowerShell
+Hora de finalización: 20261109101435
+**********************
