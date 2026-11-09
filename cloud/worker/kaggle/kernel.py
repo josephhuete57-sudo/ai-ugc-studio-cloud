@@ -326,12 +326,18 @@ def _edit(visual: Path, audio: Path, title: str, subs: Path | None, resolution: 
     subs_filter = ""
     font = _font_file()
     if subs and subs.exists() and font:
+        def _secs(tc: str) -> float:
+            h, m, s = tc.split(":")
+            return int(h) * 3600 + int(m) * 60 + float(s)
+
         entries = []
         for block in subs.read_text(encoding="utf-8", errors="ignore").strip().split("\n\n"):
             rows = [l.strip() for l in block.splitlines() if l.strip()]
             if len(rows) >= 3:
                 a, b = rows[1].split("-->")
-                entries.append((a.strip().replace(",", "."), b.strip().replace(",", "."), " ".join(rows[2:])))
+                entries.append((_secs(a.strip().replace(",", ".")),
+                                _secs(b.strip().replace(",", ".")),
+                                " ".join(rows[2:])))
         if entries:
             filters = []
             for i, (a, b, txt) in enumerate(entries):
@@ -339,7 +345,7 @@ def _edit(visual: Path, audio: Path, title: str, subs: Path | None, resolution: 
                 tf.write_text(txt, encoding="utf-8")
                 filters.append(f"drawtext=fontfile='{font}':textfile='{tf.as_posix()}':fontsize=38:"
                                f"fontcolor=white:borderw=2:bordercolor=black:x=(w-text_w)/2:"
-                               f"y=h-text_h-110:enable='between(t,{a},{b})'")
+                               f"y=h-text_h-110:enable='between(t,{a:.3f},{b:.3f})'")
             subs_filter = ",".join(filters) + ","
     title_filter = ""
     if title and font:
