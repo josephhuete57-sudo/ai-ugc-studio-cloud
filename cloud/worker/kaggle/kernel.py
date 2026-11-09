@@ -88,6 +88,48 @@ def _ensure_deps() -> None:
             _log(f"DEP FALLA {mod}: {exc!r}")
 
 
+def _has_nvidia() -> bool:
+    try:
+        r = subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, timeout=30)
+        return r.returncode == 0 and "GPU" in r.stdout
+    except Exception:
+        return False
+
+
+def _ensure_torch_cuda() -> None:
+    """Si hay GPU pero torch es la build CPU, reinstala torch con CUDA.
+
+    La imagen de Kaggle sin GPU verificada trae ``torch +cpu``. Si eso pasara
+    también con GPU activa, LivePortrait acabaría en CPU (20 min por vídeo);
+    aquí se corrige automáticamente usando el índice oficial de PyTorch.
+    """
+    if not _has_nvidia():
+        _log("Sin nvidia-smi: se asume CPU")
+        return
+    try:
+        import torch
+
+        if torch.cuda.is_available():
+            _log(f"TORCH CUDA OK {torch.__version__} {torch.cuda.get_device_name(0)}")
+            return
+        _log(f"TORCH sin CUDA ({torch.__version__}): reinstalando build CUDA")
+    except Exception:
+        _log("torch no importable: instalando build CUDA")
+    idx = "https://download.pytorch.org/whl/cu124"
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--force-reinstall",
+                        "--no-cache-dir", "--index-url", idx, "torch", "torchvision"],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        import importlib
+
+        import torch as _t
+
+        importlib.reload(_t)
+        _log(f"TORCH CUDA {_t.__version__} disponible={_t.cuda.is_available()}")
+    except Exception as exc:
+        _log(f"AVISO: no se pudo instalar torch CUDA ({exc!r}); se sigue en CPU")
+
+
 def _gpu() -> str:
     try:
         import torch
@@ -209,12 +251,30 @@ def _lp_weights() -> None:
 
 
 
+def _on_gpu() -> bool:
+    """True solo si torch tiene CUDA real (no basta con 'nvidia-smi')."""
+    try:
+        import torch
+
+        return bool(torch.cuda.is_available())
+    except Exception:
+        return False
+
+
+def _require_input(path: Path, label: str) -> None:
+    """Falla con un mensaje claro si la descarga del backend quedó vacía."""
+    if not path.is_file() or path.stat().st_size < 512:
+        raise RuntimeError(f"Entrada inválida ({label}): no se pudo descargar del backend")
+
+
 def _lp_animate(source: Path, driving: Path) -> Path:
+    _require_input(source, "foto")
+    _require_input(driving, "vídeo de referencia")
     repo = _clone("https://github.com/KwaiVGI/LivePortrait.git", "LivePortrait")
     _lp_weights()
     out_dir = WORK / f"anim_{int(time.time())}"
     out_dir.mkdir(parents=True, exist_ok=True)
-    on_gpu = _gpu() != "CPU"
+    on_gpu = _on_gpu()
     cmd = [sys.executable, str(repo / "inference.py"),
            "-s", str(source), "-d", str(driving), "-o", str(out_dir)]
     if on_gpu:
@@ -262,6 +322,8 @@ def _w2l_weights() -> str:
 
 
 def _lipsync(face: Path, audio: Path) -> Path:
+    _require_input(face, "vídeo animado")
+    _require_input(audio, "audio")
     repo = _clone("https://github.com/Rudrabha/Wav2Lip.git", "Wav2Lip")
     ckpt = _w2l_weights()
     out = WORK / f"lipsync_{int(time.time())}.mp4"
@@ -408,12 +470,13 @@ def process(job: dict) -> Path:
     elif kind == "editor":
         vis = dl(payload["visual_path"], "visual.mp4")
         aud = dl(payload.get("audio_path") or "", "audio.wav")
-        subs = _srt(payload.get("script", "") or " ", aud) if aud.exists() else None
+        subs = _srt(payload.get("script", "") or " ", aud) if aud.is_file() else None
         final = _edit(vis, aud, payload.get("title", ""), subs, "720x1280")
     elif kind == "flujo":
         photo = dl(payload["photo_path"], "foto.jpg")
         drv = dl(payload["driving_path"], "driving.mp4")
-        if not audio_path.exists():
+        # Path("") == Path(".") y existe: hay que comprobar is_file(), no exists().
+        if not audio_path.is_file() or audio_path.stat().st_size < 1024:
             _progress(jid, "Generando voz (edge-tts)…")
             audio_path = _tts(payload.get("script") or "Anuncio", tmp / "voz.mp3")
         _progress(jid, "LivePortrait…", 30)
@@ -438,6 +501,7 @@ def main() -> None:
     if not BACKEND or not (WKEY or PRIV_HEX):
         raise SystemExit("Faltan BACKEND_URL y credenciales de worker (firma o clave).")
     _ensure_deps()
+    _ensure_torch_cuda()
     _log(f"GPU: {_gpu()} | BACKEND={BACKEND}")
     start = time.time()
     try:

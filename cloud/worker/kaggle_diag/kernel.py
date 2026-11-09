@@ -11,6 +11,13 @@ import time
 print("PYTHON", sys.version.split()[0], platform.platform(), flush=True)
 
 # ---------- GPU ----------
+try:
+    smi = subprocess.run(["nvidia-smi", "-L"], capture_output=True, text=True, timeout=60)
+    print("NVIDIA_SMI_RC", smi.returncode, smi.stdout.strip().replace("\n", " | "),
+          smi.stderr.strip()[:200], flush=True)
+except Exception as exc:
+    print("NVIDIA_SMI_FAIL", repr(exc)[:200], flush=True)
+
 HAS_CUDA = False
 try:
     import torch
@@ -20,6 +27,8 @@ try:
         print("GPU", torch.cuda.get_device_name(0),
               torch.cuda.get_device_properties(0).total_memory // 1024**2, "MB", flush=True)
     print("TORCH_CUDA_BUILD", torch.version.cuda, flush=True)
+    import torchvision
+    print("TORCHVISION", torchvision.__version__, flush=True)
 except Exception as exc:
     print("TORCH_FAIL", repr(exc), flush=True)
 
