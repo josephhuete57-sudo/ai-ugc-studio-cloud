@@ -205,25 +205,41 @@ def _generate_audio_auto(text: str, reference_id: str | None, provider: str, voi
 
 
 def _resolve_asset(path_str: str) -> Path:
-    """Resuelve un path solo dentro de assets/projects/exports."""
+    """Resuelve un path solo dentro de assets/projects/exports.
+
+    Acepta rutas absolutas del contenedor (las que devuelve la API) y rutas
+    relativas, que se buscan también dentro de assets/projects/exports. Así
+    ``/api/cloud/files/mi_video.mp4`` funciona aunque el archivo viva en
+    ``exports/`` (el worker sube ahí y el dashboard pide por nombre).
+    """
     if not path_str:
         raise HTTPException(400, "Falta la ruta del archivo.")
-    candidate = Path(path_str)
-    if not candidate.is_absolute():
-        candidate = settings.BASE_DIR / path_str
-    candidate = candidate.resolve()
     allowed_roots = [settings.ASSETS_DIR.resolve(), settings.PROJECTS_DIR.resolve(),
                      settings.EXPORTS_DIR.resolve(), settings.BASE_DIR.resolve()]
-    for root in allowed_roots:
-        try:
-            candidate.relative_to(root)
-            break
-        except ValueError:
-            continue
+    raw = Path(path_str.replace("\\", "/"))
+    if raw.is_absolute():
+        candidates = [raw]
     else:
+        candidates = [settings.BASE_DIR / path_str]
+        candidates += [root / path_str for root in allowed_roots[:3]]
+
+    outside = False
+    for cand in candidates:
+        candidate = cand.resolve()
+        for root in allowed_roots:
+            try:
+                candidate.relative_to(root)
+                break
+            except ValueError:
+                continue
+        else:
+            outside = True
+            continue
+        if candidate.exists():
+            return candidate
+    if outside and len(candidates) == 1:
         raise HTTPException(403, "Ruta no permitida.")
-    if not candidate.exists():
-        raise HTTPException(404, f"Archivo no encontrado: {candidate.name}")
+    raise HTTPException(404, f"Archivo no encontrado: {raw.name}")
     return candidate
 
 
