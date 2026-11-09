@@ -14,11 +14,37 @@ from app.core.config import settings
 from app.services import animation, fish_audio, local_tts, maintenance, media, remote_worker, script_writer, subtitles, video_editor
 
 
+def _worker_pubkey() -> bytes:
+    """Clave pública Ed25519 del worker (publicada en el repo, no es secreta)."""
+    try:
+        raw = (settings.BASE_DIR / "cloud" / "worker_public_key.txt").read_text(encoding="utf-8").strip()
+        return bytes.fromhex(raw) if raw else b""
+    except Exception:
+        return b""
+
+
 def _worker_key_ok(request: Request) -> bool:
     expected = settings.CLOUD_WORKER_KEY
-    if not expected:
+    if expected and request.headers.get("x-worker-key", "") == expected:
+        return True
+    # Firma Ed25519: no requiere ningún secreto configurado en el backend.
+    pub = _worker_pubkey()
+    if not pub:
         return False
-    return request.headers.get("x-worker-key", "") == expected
+    ts = request.headers.get("x-worker-timestamp", "")
+    sig = request.headers.get("x-worker-signature", "")
+    if not ts or not sig:
+        return False
+    try:
+        if abs(time.time() - int(ts)) > 900:
+            return False
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
+
+        key = Ed25519PublicKey.from_public_bytes(pub)
+        key.verify(bytes.fromhex(sig), f"{ts}:{request.url.path}".encode())
+        return True
+    except Exception:
+        return False
 
 router = APIRouter(prefix="/api", tags=["studio"])
 
@@ -118,6 +144,10 @@ class FlowIn(BaseModel):
     title: str = ""
     audio_provider: str = "auto"  # auto | fish | local (fallback automático si Fish no tiene saldo)
     resolution: str = "720x1280"
+    # Cloud: audio ya subido por el usuario y/o guion explícito (sin Fish)
+    audio_path: Optional[str] = None
+    script: str = ""
+    voice_id: Optional[str] = None
 
 
 # ----------helpers ----------
@@ -528,25 +558,31 @@ def flow_generate(payload: FlowIn):
         photo_str = inf["photo_path"] if inf else ""
     if not photo_str:
         raise HTTPException(400, "Selecciona un influencer (o indica su foto).")
-    if not (project.get("script") or "").strip():
-        raise HTTPException(400, "El proyecto no tiene guion.")
-    if not (project.get("voice_id") or "").strip():
-        raise HTTPException(400, "El proyecto no tiene voz (reference_id de Fish Audio).")
-    if not payload.driving_video:
+    script_text = (payload.script or project.get("script") or "").strip()
+    audio_override = payload.audio_path or ""
+    if not script_text and not audio_override:
+        raise HTTPException(400, "El proyecto no tiene guion ni audio.")
+    if not (payload.driving_video):
         raise HTTPException(400, "Sube el vídeo de referencia de movimiento para LivePortrait.")
 
     pid = payload.project_id
     photo_path = _resolve_asset(photo_str)
     driving_path = _resolve_asset(payload.driving_video)
     music_path = _resolve_asset(payload.music_path) if payload.music_path else None
+    audio_path = _resolve_asset(audio_override) if audio_override else None
+    # Persistir audio/guion subidos para que el runner local (modo CPU) los reutilice.
+    if audio_path is not None:
+        database.update_project(pid, {"audio_path": str(audio_path)})
+    if script_text:
+        database.update_project(pid, {"script": script_text})
 
     if settings.CLOUD_INFERENCE_MODE == "kaggle":
         current = database.get_project(pid) or {}
         return _enqueue_remote("flujo", "flujo", {
             "photo_path": str(photo_path),
             "driving_path": str(driving_path),
-            "audio_path": current.get("audio_path") or "",
-            "script": current.get("script") or "",
+            "audio_path": str(audio_path) if audio_path else (current.get("audio_path") or ""),
+            "script": script_text,
             "music_path": str(music_path) if music_path else "",
             "title": payload.title or (current.get("name") or ""),
             "use_lipsync": bool(payload.use_lipsync),
@@ -704,7 +740,8 @@ def worker_result(payload: dict, request: Request):
     ext = remote_worker.get_ext(ext_id)
     if ext and ext.get("project_id") and status == "completed" and ext.get("result_path"):
         kind = ext["kind"]
-        field = {"animacion": "animated_path", "lipsync": "lipsync_path", "editor": "final_path"}.get(kind)
+        field = {"animacion": "animated_path", "lipsync": "lipsync_path",
+                 "editor": "final_path", "flujo": "final_path"}.get(kind)
         if field:
             database.update_project(ext["project_id"], {field: ext["result_path"], "status": "done"})
             database.log_generation(ext["project_id"], kind, ext["result_path"])
@@ -737,6 +774,39 @@ def cancel_job(job_id: int):
 def get_asset(path: str):
     file_path = _resolve_asset(path)
     return FileResponse(str(file_path))
+
+
+@router.get("/cloud/files/{file_path:path}")
+def cloud_file(file_path: str, download: bool = False):
+    """Sirve un artefacto (foto/audio/MP4) al dashboard público.
+
+    Solo dentro de assets/projects/exports (ver _resolve_asset).
+    """
+    file_path = file_path.replace("\\", "/") if ":" not in file_path else file_path
+    file = _resolve_asset(file_path)
+    if download:
+        return FileResponse(str(file), filename=file.name, content_disposition_type="attachment")
+    return FileResponse(str(file))
+
+
+@router.get("/cloud/status")
+def cloud_status():
+    """Estado de la cola remota para el dashboard (sin exponer secretos)."""
+    from app.core import database as _db
+
+    conn = _db.get_conn()
+    try:
+        rows = conn.execute("SELECT status, COUNT(*) c FROM ext_jobs GROUP BY status").fetchall()
+    except Exception:
+        rows = []
+    finally:
+        conn.close()
+    counts = {r["status"]: r["c"] for r in rows}
+    return {
+        "mode": settings.CLOUD_INFERENCE_MODE,
+        "worker_configured": bool(settings.CLOUD_WORKER_KEY) or bool(_worker_pubkey()),
+        "queue": counts,
+    }
 
 
 @router.get("/cloud/worker/files")

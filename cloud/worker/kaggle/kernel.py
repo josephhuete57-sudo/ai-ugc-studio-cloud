@@ -21,6 +21,7 @@ from pathlib import Path
 
 BACKEND = os.environ.get("BACKEND_URL", "").rstrip("/")
 WKEY = os.environ.get("WORKER_KEY", "")
+PRIV_HEX = os.environ.get("WORKER_PRIV_HEX", "")
 HF_TOKEN = os.environ.get("HF_TOKEN", "")
 MAX_RUNTIME_MIN = int(os.environ.get("MAX_RUNTIME_MIN", "55"))
 WORK = Path("/kaggle/working") if Path("/kaggle/working").exists() else Path(tempfile.gettempdir()) / "ugc_work"
@@ -43,7 +44,7 @@ def _ensure_deps() -> None:
     for mod, pkg in [("onnxruntime", "onnxruntime"), ("cv2", "opencv-python-headless"),
                      ("huggingface_hub", "huggingface_hub"), ("requests", "requests"),
                      ("edge_tts", "edge-tts"), ("scipy", "scipy"), ("librosa", "librosa==0.9.2"),
-                     ("torch", "torch")]:
+                     ("cryptography", "cryptography"), ("torch", "torch")]:
         try:
             __import__(mod)
         except ImportError:
@@ -62,11 +63,28 @@ def _gpu() -> str:
         return "CPU(desconocida)"
 
 
+def _auth_headers(path: str) -> dict:
+    """Firma Ed25519 (privada) o clave compartida; el backend acepta cualquiera."""
+    headers: dict[str, str] = {}
+    if PRIV_HEX:
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+        ts = str(int(time.time()))
+        msg = f"{ts}:{path.split('?')[0]}".encode()
+        sig = Ed25519PrivateKey.from_private_bytes(bytes.fromhex(PRIV_HEX)).sign(msg).hex()
+        headers["X-Worker-Timestamp"] = ts
+        headers["X-Worker-Signature"] = sig
+    if WKEY:
+        headers["X-Worker-Key"] = WKEY
+    return headers
+
+
 def _http(method: str, path: str, **kw):
     import requests
 
-    r = requests.request(method, BACKEND + path, headers={"X-Worker-Key": WKEY},
-                         timeout=60, **kw)
+    extra = kw.pop("headers", {}) or {}
+    r = requests.request(method, BACKEND + path,
+                         headers={**_auth_headers(path), **extra}, timeout=60, **kw)
     r.raise_for_status()
     return r
 
@@ -97,8 +115,8 @@ def _upload_result(local_path: Path) -> str:
 
     with local_path.open("rb") as fh:
         r = requests.post(BACKEND + "/api/cloud/worker/upload",
-                          headers={"X-Worker-Key": WKEY},
-                          files={"file": (local_path.name, fh)}, timeout=300)
+                          headers=_auth_headers("/api/cloud/worker/upload"),
+                          files={"file": (local_path.name, fh)}, timeout=600)
     r.raise_for_status()
     return r.json()["path"]
 
@@ -351,8 +369,8 @@ def process(job: dict) -> Path:
 
 
 def main() -> None:
-    if not BACKEND or not WKEY:
-        raise SystemExit("Faltan BACKEND_URL / WORKER_KEY (kernel parameters).")
+    if not BACKEND or not (WKEY or PRIV_HEX):
+        raise SystemExit("Faltan BACKEND_URL y credenciales de worker (firma o clave).")
     _ensure_deps()
     _log(f"GPU: {_gpu()} | BACKEND={BACKEND}")
     start = time.time()

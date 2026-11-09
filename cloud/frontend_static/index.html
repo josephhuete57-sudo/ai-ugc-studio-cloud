@@ -8,7 +8,7 @@
 </head>
 <body>
 <header class="topbar">
-  <div class="brand"><span class="logo">▶</span> AI UGC STUDIO <small>CPU local</small></div>
+  <div class="brand"><span class="logo">▶</span> AI UGC STUDIO <small>Cloud GPU · gratis</small></div>
   <nav id="nav">
     <button data-view="dashboard" class="active">Dashboard</button>
     <button data-view="influencers">AI Influencers</button>
@@ -28,13 +28,28 @@
 </header>
 
 <script>
-window.STUDIO_API_BASE = localStorage.getItem("studio_api_base") || "";
+window.STUDIO_API_BASE = localStorage.getItem("studio_api_base") || "https://ai-ugc-studio-backend.onrender.com";
 </script>
 
 <main>
 <!-- DASHBOARD -->
 <section id="view-dashboard" class="view active">
   <h1>Dashboard <span class="muted" id="healthLine"></span></h1>
+
+  <div class="panel" id="quickPanel">
+    <h2>Crear anuncio (GPU cloud · gratis)</h2>
+    <form id="formQuick" class="panel">
+      <label>Foto del influencer (retrato de frente) <input type="file" id="qPhoto" accept=".jpg,.jpeg,.png,.webp" required></label>
+      <label>Audio de voz (opcional: si no lo subes, se genera con TTS gratis) <input type="file" id="qAudio" accept=".mp3,.wav,.m4a,.ogg"></label>
+      <label>Guion <textarea id="qScript" rows="3" maxlength="1200" placeholder="Hola, soy tu influencer y hoy te traigo…"></textarea></label>
+      <label>Título del anuncio <input id="qTitle" maxlength="60" placeholder="Mi producto"></label>
+      <label><input type="checkbox" id="qLipsync" checked> Sincronizar labios (Wav2Lip)</label>
+      <label>Resolución <select id="qRes"><option>720x1280</option><option>1080x1920</option></select></label>
+      <button type="submit" class="big">GENERAR VIDEO (GPU CLOUD)</button>
+      <span class="hint">Todo el procesamiento ocurre en la nube (worker GPU). Tu PC solo usa el navegador.</span>
+    </form>
+    <div id="qResult"></div>
+  </div>
   <div class="cards">
     <div class="card"><div class="num" id="statProjects">0</div><div class="lbl">Proyectos totales</div></div>
     <div class="card"><div class="num" id="statVideos">0</div><div class="lbl">Videos generados</div></div>

@@ -11,16 +11,20 @@ async function api(url, opts = {}) {
   if (!r.ok) { const txt = await r.text().catch(() => r.statusText); throw new Error(`${r.status} · ${txt.slice(0, 400)}`); }
   return r.json();
 }
-const assetUrl = (path) => {
+const assetUrl = (path, extra = null) => {
+  if (!API_BASE) return path;
+  const base = `${API_BASE}/api/cloud/files/${encodeURIComponent(path)}`;
+  const q = new URLSearchParams();
   const t = TOKEN();
-  const base = API_BASE ? `${API_BASE}/api/cloud/files/${encodeURIComponent(path)}` : path;
-  if (t && API_BASE) return `${base}?token=${encodeURIComponent(t)}`;
-  return base;
+  if (t) q.set("token", t);
+  if (extra) Object.entries(extra).forEach(([k, v]) => q.set(k, v));
+  const qs = q.toString();
+  return qs ? `${base}?${qs}` : base;
 };
 {
   const b = document.querySelector("#cloudBase"), tk = document.querySelector("#cloudToken");
   if (b && tk) {
-    b.value = localStorage.getItem("studio_api_base") || "";
+    b.value = localStorage.getItem("studio_api_base") || API_BASE;
     tk.value = localStorage.getItem("studio_cloud_token") || "";
     document.querySelector("#btnSaveCloud").addEventListener("click", () => {
       localStorage.setItem("studio_api_base", b.value.trim());
@@ -48,7 +52,7 @@ async function refreshDashboard() {
     ]);
     $("#statProjects").textContent = projects.length;
     $("#statVideos").textContent = projects.filter((p) => p.final_path).length;
-    $("#statPending").textContent = jobs.filter((j) => ["queued", "running"].includes(j.status)).length;
+    $("#statPending").textContent = jobs.filter((j) => ["queued", "running", "pending", "processing"].includes(j.status)).length;
     $("#statInfluencers").textContent = influencers.length;
     $("#healthLine").textContent = health.status ? `· backend ${health.status}` : "";
     const lp = engines.liveportrait, w = engines.wav2lip, f = engines.fish_audio;
@@ -70,8 +74,8 @@ function renderJobs(list, selector) {
     <div class="job">
       <b>#${j.id} ${esc(j.kind)}</b> · <span class="status-${esc(j.status)}">${esc(j.status)}</span>
       · ${esc(j.step || "")}
-      ${j.status === "running" || j.status === "queued" ? `<button data-cancel="${j.id}">Cancelar</button>` : ""}
-      ${j.result_path ? `<br><video controls src="${assetUrl(encodeURIComponent(j.result_path))}" style="max-width:320px;margin-top:8px"></video>` : ""}
+      ${ACTIVE.includes(j.status) ? `<button data-cancel="${j.id}">Cancelar</button>` : ""}
+      ${j.result_path ? `<br><video controls src="${assetUrl(j.result_path)}" style="max-width:320px;margin-top:8px"></video>` : ""}
       <div class="bar"><i style="width:${j.progress ?? 0}%"></i></div>
       ${j.error ? `<div class="status-error">${esc(j.error)}</div>` : ""}
       <pre>${esc((j.log || "").slice(-1200))}</pre>
@@ -85,7 +89,7 @@ function renderJobs(list, selector) {
 async function refreshInfluencers() {
   const list = await api("/api/influencers").catch(() => []);
   $("#influencersGrid").innerHTML = list.map((inf) => `
-    <div class="tile"><img src="${assetUrl(encodeURIComponent(inf.photo_path))}" alt="">
+    <div class="tile"><img src="${assetUrl(inf.photo_path)}" alt="">
       <b>${esc(inf.name)}</b><br><small class="muted">ID ${inf.id}</small>
       <button data-delinf="${inf.id}">Eliminar</button></div>`).join("") || "<p class=muted>Sube tu primer personaje.</p>";
   $("#influencersGrid").querySelectorAll("[data-delinf]").forEach((b) => b.addEventListener("click", async () => {
@@ -147,7 +151,7 @@ $("#formVoice").addEventListener("submit", async (e) => {
     provider: $("#voiceProvider").value, voice_name: $("#voiceLocal").value || null,
     project_id: $("#voiceProject").value ? Number($("#voiceProject").value) : null };
   const r = await api("/api/voice/generate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-  $("#voiceResult").innerHTML = `<b>Audio generado ✔</b> <audio controls src="${assetUrl(encodeURIComponent(r.path))}"></audio><br><small class=muted>${esc(r.path)}</small>`;
+  $("#voiceResult").innerHTML = `<b>Audio generado ✔</b> <audio controls src="${assetUrl(r.path)}"></audio><br><small class=muted>${esc(r.path)}</small>`;
 });
 $("#formLip").addEventListener("submit", async (e) => {
   e.preventDefault();
@@ -220,7 +224,7 @@ async function refreshProjects() {
   const list = await api("/api/projects").catch(() => []);
   $("#projectsTable").innerHTML = list.map((p) => `
     <tr><td>${p.id}</td><td>${esc(p.name)}</td><td>${esc(p.product || "—")}</td><td>${esc(p.status)}</td>
-    <td>${p.final_path ? `<a href="${assetUrl(encodeURIComponent(p.final_path))}" download>MP4</a> ` : ""}
+    <td>${p.final_path ? `<a href="${assetUrl(p.final_path, { download: 1 })}" download>MP4</a> ` : ""}
     <button data-delproj="${p.id}">Eliminar</button></td></tr>`).join("") || "<tr><td colspan=5>Sin proyectos.</td></tr>";
   $("#projectsTable").querySelectorAll("[data-delproj]").forEach((b) => b.addEventListener("click", async () => {
     await api(`/api/projects/${b.dataset.delproj}`, { method: "DELETE" }); refreshProjects();
@@ -244,6 +248,57 @@ $("#formFlow").addEventListener("submit", async (e) => {
   pollJob(r.job_id, "#jobPanel");
 });
 
+// ---------- creación rápida de anuncio (GPU cloud) ----------
+const ACTIVE = ["queued", "running", "pending", "processing"];
+$("#formQuick").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const btn = e.target.querySelector("button[type=submit]");
+  const label = btn.textContent;
+  btn.disabled = true;
+  try {
+    const photoFile = $("#qPhoto").files[0];
+    if (!photoFile) throw new Error("Selecciona una foto.");
+    btn.textContent = "Subiendo foto…";
+    const fd = new FormData(); fd.append("photo", photoFile);
+    const photo = (await api("/api/influencers/upload", { method: "POST", body: fd })).path;
+
+    let audioPath = null;
+    if ($("#qAudio").files[0]) {
+      btn.textContent = "Subiendo audio…";
+      const fa = new FormData(); fa.append("audio", $("#qAudio").files[0]);
+      audioPath = (await api("/api/upload/audio", { method: "POST", body: fa })).path;
+    }
+    const script = $("#qScript").value.trim();
+    if (!audioPath && !script) throw new Error("Sube un audio o escribe un guion.");
+
+    btn.textContent = "Creando trabajo…";
+    const project = await api("/api/projects", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: $("#qTitle").value || "Anuncio", script, status: "draft" }),
+    });
+    const r = await api("/api/flow/generate", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        project_id: project.id,
+        influencer_photo: photo,
+        driving_video: "projects/driving_short15.mp4",
+        audio_path: audioPath,
+        script,
+        title: $("#qTitle").value,
+        use_lipsync: $("#qLipsync").checked,
+        resolution: $("#qRes").value,
+      }),
+    });
+    $("#qResult").innerHTML = "";
+    pollJob(r.job_id, "#qResult");
+  } catch (err) {
+    $("#qResult").innerHTML = `<div class="status-error">${esc(err.message)}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = label;
+  }
+});
+
 // ---------- jobs polling (progreso real, sin % inventados) ----------
 function pollJob(id, selector) {
   const tick = async () => {
@@ -251,14 +306,14 @@ function pollJob(id, selector) {
     if (!j) return;
     $(selector).innerHTML = `<div class="job"><b>Trabajo #${j.id} ${esc(j.kind)}</b>
       · <span class="status-${esc(j.status)}">${esc(j.status)}</span> · ${esc(j.step || "")}
-      ${["queued", "running"].includes(j.status) ? `<button id="cancelBtn">Cancelar</button>` : ""}
+      ${ACTIVE.includes(j.status) ? `<button id="cancelBtn">Cancelar</button>` : ""}
       <div class="bar"><i style="width:${j.progress ?? 0}%"></i></div>
       ${j.error ? `<div class="status-error">${esc(j.error)}</div>` : ""}
-      ${j.result_path ? `<video controls src="${assetUrl(encodeURIComponent(j.result_path))}" style="max-width:360px"></video><br><a href="${assetUrl(encodeURIComponent(j.result_path))}" download>Descargar MP4</a>` : ""}
+      ${j.result_path ? `<video controls src="${assetUrl(j.result_path)}" style="max-width:360px"></video><br><a href="${assetUrl(j.result_path, { download: 1 })}" download>Descargar MP4</a>` : ""}
       <pre>${esc((j.log || "").slice(-1500))}</pre></div>`;
     const cb = $("#cancelBtn");
     if (cb) cb.addEventListener("click", async () => { await api(`/api/jobs/${id}/cancel`, { method: "POST" }); });
-    if (["queued", "running"].includes(j.status)) setTimeout(tick, 1500);
+    if (ACTIVE.includes(j.status)) setTimeout(tick, 2000);
   };
   tick();
 }

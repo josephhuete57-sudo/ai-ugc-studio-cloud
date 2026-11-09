@@ -23,3 +23,8 @@ app/studio.db
 *.bak_20261109
 kaggle.json
 cloud/worker/kaggle/cache/
+cloud/worker/kaggle/_build/
+cloud/data/
+tests/render_sim_checkout/
+tests/render_sim_venv/
+cloud/worker/kaggle_diag/_build/

@@ -40,9 +40,16 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(title="AI UGC Studio", version="1.0.0", lifespan=lifespan)
+# Frontend público en HF Static (*.static.hf.space) + desarrollo local.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://127.0.0.1:8000", "http://localhost:8000"],
+    allow_origins=[
+        "https://josjshid99-ai-ugc-studio-web.static.hf.space",
+        "https://huggingface.co",
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+        "*",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
