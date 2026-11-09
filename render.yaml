@@ -20,6 +20,12 @@ services:
         generateValue: true
       - key: MAX_UPLOAD_MB
         value: "100"
+      - key: HF_TOKEN
+        sync: false
+      - key: HF_REPO
+        sync: false
+      - key: HF_REPO_TYPE
+        value: model
       - key: FISH_AUDIO_API_KEY
         sync: false
       - key: FISH_AUDIO_REFERENCE_ID

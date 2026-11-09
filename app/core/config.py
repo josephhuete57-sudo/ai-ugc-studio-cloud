@@ -81,6 +81,10 @@ class Settings:
     PROFILE: str = os.environ.get("PROFILE", "LOW_RAM_12GB")
     CLOUD_INFERENCE_MODE: str = os.environ.get("CLOUD_INFERENCE_MODE", "local")  # local | kaggle
     CLOUD_WORKER_KEY: str = os.environ.get("CLOUD_WORKER_KEY", "")
+    # Persistencia opcional en Hugging Face (Render free borra el disco al reiniciar).
+    HF_TOKEN: str = os.environ.get("HF_TOKEN", "")
+    HF_REPO: str = os.environ.get("HF_REPO", "")
+    HF_REPO_TYPE: str = os.environ.get("HF_REPO_TYPE", "model")  # model | dataset
     CPU_THREADS: int = _int("CPU_THREADS", 2)
     FFMPEG_THREADS: int = _int("FFMPEG_THREADS", 2)
     MIN_FREE_RAM_GB: float = float(os.environ.get("MIN_FREE_RAM_GB", "2.5"))

@@ -1,5 +1,5 @@
 {
-  "id": "ai-ugc-studio/worker",
+  "id": "josephfrancia25/ai-ugc-studio-gpu-worker",
   "title": "AI UGC Studio GPU worker",
   "code_file": "kernel.py",
   "kernel_type": "script",
@@ -8,8 +8,6 @@
   "enable_internet": true,
   "parameters": {
     "BACKEND_URL": "https://ai-ugc-studio-backend.onrender.com",
-    "WORKER_KEY": "CAMBIAR",
-    "HF_TOKEN": "",
-    "MAX_RUNTIME_MIN": "55"
+    "MAX_RUNTIME_MIN": "170"
   }
 }

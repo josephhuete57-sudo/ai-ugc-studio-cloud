@@ -10,7 +10,24 @@ Foto → LivePortrait (animación) → Wav2Lip (labios) → voz (Fish/local) →
 
 - **Local (CPU)**: `run_studio.bat` → `http://127.0.0.1:8001` (el 8000 está ocupado por otro servicio).
 - **Manual**: `.venv\Scripts\python.exe -m uvicorn app.main:app --host 127.0.0.1 --port 8001`
-- **Cloud**: ver `CLOUD_ARCHITECTURE.md` → `CLOUD_DEPLOYMENT.md` (dashboard remoto + ZeroGPU gratis).
+- **Cloud gratis**: ver `FREE_CLOUD_EDITION.md` y `CLOUD_PUBLICAR.md`.
+
+## Cloud gratis (0 USD, sin cómputo en tu PC)
+
+| Pieza | Servicio | URL |
+|---|---|---|
+| Dashboard | HF Static | https://josjshid99-ai-ugc-studio-web.static.hf.space |
+| Backend / API | Render free | https://ai-ugc-studio-backend.onrender.com |
+| Worker GPU | Kaggle T4 | kernel `josephfrancia25/ai-ugc-studio-gpu-worker` |
+| Pesos | HF | https://huggingface.co/josjshid99/ai-ugc-studio-weights |
+
+En modo `CLOUD_INFERENCE_MODE=kaggle` el backend solo encola y entrega archivos;
+el worker de Kaggle hace LivePortrait + Wav2Lip + TTS + FFmpeg. La cola
+(`ext_jobs`) tiene progreso, reintento de trabajos huérfanos y latido del worker
+(el dashboard muestra `GPU ONLINE` / `GPU APAGADO`). El worker se autentica con
+firma Ed25519 (sin compartir secretos). Ver `AUDITORIA_FINAL_FREE_CLOUD.md` para
+el estado verificado y el único bloqueo pendiente (verificación telefónica de
+Kaggle).
 
 Sin CUDA: todo el stack local corre en CPU. LivePortrait de ~3 s (78 frames) tarda
 ~20 min en CPU con 2 hilos; recorta el vídeo de referencia para iterar rápido.
@@ -56,6 +73,7 @@ Reutiliza etapas completadas al reintentar.
 | `OPENAI_API_KEY` (opcional) | LLM real para guiones; sin ella, plantillas UGC editables |
 | `MAX_UPLOAD_MB` | Límite de subidas (25 por defecto) |
 | `PROFILE` / `CPU_THREADS` / `MIN_FREE_RAM_GB` | Perfil de memoria (ver arriba) |
+| `HF_TOKEN` / `HF_REPO` / `HF_REPO_TYPE` | Opcional: persiste base y MP4 en HF (sobrevive a reinicios de Render) |
 
 ## Estructura
 

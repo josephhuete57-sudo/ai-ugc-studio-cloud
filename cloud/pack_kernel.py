@@ -49,7 +49,8 @@ def main() -> None:
         raise SystemExit("No se pudo inyectar la configuración en kernel.py.")
     src.write_text(code, encoding="utf-8")
     meta = json.loads((BUILD / "kernel-metadata.json").read_text(encoding="utf-8"))
-    meta["parameters"] = {"BACKEND_URL": backend, "MAX_RUNTIME_MIN": "55"}
+    runtime = str(meta.get("parameters", {}).get("MAX_RUNTIME_MIN", "170"))
+    meta["parameters"] = {"BACKEND_URL": backend, "MAX_RUNTIME_MIN": runtime}
     (BUILD / "kernel-metadata.json").write_text(
         json.dumps(meta, indent=2, ensure_ascii=False), encoding="utf-8")
     print("BUILD OK", BUILD, "| BACKEND", backend, "| firma", priv_hex[:8] + "…")

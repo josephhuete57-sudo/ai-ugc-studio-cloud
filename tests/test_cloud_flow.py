@@ -4,13 +4,14 @@ Se ejecuta contra un backend local en modo kaggle (simula Render). Sin GPU:
 el "worker" sube un MP4 ya existente para validar todo el circuito HTTP.
 Usa la MISMA autenticación firmada Ed25519 que el worker real de Kaggle.
 """
+import os
 import time
 from pathlib import Path
 
 import requests
 from cryptography.hazmat.primitives import serialization
 
-B = "http://127.0.0.1:8003"
+B = os.environ.get("CLOUD_B", "http://127.0.0.1:8003")
 ROOT = r"C:\AI_UGC_STUDIO"
 _KEY = serialization.load_pem_private_key(
     Path(ROOT, "cloud", "data", "worker_ed25519.pem").read_bytes(), password=None)

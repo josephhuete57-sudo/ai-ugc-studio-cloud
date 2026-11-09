@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from app.api.routes import router
 from app.core import database
 from app.core.config import settings
+from app.services import cloud_store
 
 # Los logs/ no viajan en git (checkout en Render sin esa carpeta): crearlos
 # ANTES del FileHandler para no tumbar el arranque (exit 1 en Render).
@@ -34,7 +35,12 @@ async def lifespan(_app: FastAPI):
     for d in (settings.ASSETS_DIR, settings.INFLUENCERS_DIR, settings.AUDIO_DIR,
               settings.MUSIC_DIR, settings.PROJECTS_DIR, settings.EXPORTS_DIR, settings.LOGS_DIR):
         d.mkdir(parents=True, exist_ok=True)
+    # Render free borra el disco: si hay HF_TOKEN/HF_REPO, recupera el estado.
+    cloud_store.restore_db()
     database.init_db()
+    cloud_store.start_backup_loop()
+    if cloud_store.enabled():
+        logger.info("Persistencia HF activa en %s (%s)", settings.HF_REPO, settings.HF_REPO_TYPE)
     logger.info("AI UGC STUDIO listo en http://%s:%s", settings.HOST, settings.PORT)
     yield
 

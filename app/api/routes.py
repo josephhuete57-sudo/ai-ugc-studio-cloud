@@ -6,12 +6,22 @@ from pathlib import Path
 from typing import Optional
 
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from pydantic import BaseModel, Field
 
 from app.core import database, jobs, memory
 from app.core.config import settings
-from app.services import animation, fish_audio, local_tts, maintenance, media, remote_worker, script_writer, subtitles, video_editor
+from app.services import (animation, cloud_store, fish_audio, local_tts, maintenance,
+                          media, remote_worker, script_writer, subtitles, video_editor)
+
+
+def _mirror_async(path: Path | str) -> None:
+    """Espeja un artefacto en HF sin bloquear la petición (si está activo)."""
+    if not cloud_store.enabled():
+        return
+    import threading
+
+    threading.Thread(target=cloud_store.mirror, args=(path,), daemon=True).start()
 
 
 def _worker_pubkey() -> bytes:
@@ -297,6 +307,7 @@ def engines():
 async def upload_influencer(photo: UploadFile = File(...)):
     _check_size(photo)
     path = _save_upload(photo, settings.INFLUENCERS_DIR, settings.ALLOWED_IMAGES)
+    _mirror_async(path)
     return {"path": str(path), "url": f"/api/assets?path={path.as_posix()}"}
 
 
@@ -417,6 +428,7 @@ async def upload_video(video: UploadFile = File(...)):
 async def upload_audio(audio: UploadFile = File(...)):
     _check_size(audio)
     path = _save_upload(audio, settings.AUDIO_DIR, settings.ALLOWED_AUDIOS)
+    _mirror_async(path)
     return {"path": str(path), "url": f"/api/assets?path={path.as_posix()}"}
 
 
@@ -424,6 +436,7 @@ async def upload_audio(audio: UploadFile = File(...)):
 async def upload_music(music: UploadFile = File(...)):
     _check_size(music)
     path = _save_upload(music, settings.MUSIC_DIR, settings.ALLOWED_AUDIOS | {".mp4"})
+    _mirror_async(path)
     return {"path": str(path), "url": f"/api/assets?path={path.as_posix()}"}
 
 
@@ -728,7 +741,9 @@ async def worker_upload(request: Request):
     target = media.unique_path(settings.EXPORTS_DIR, filename)
     file.file.seek(0)
     target.write_bytes(file.file.read())
-    return {"path": str(target)}
+    # Espejo inmediato: el MP4 debe sobrevivir a un reinicio de Render.
+    remote = cloud_store.mirror(target)
+    return {"path": str(target), "remote": remote}
 
 
 @router.post("/cloud/worker/result")
@@ -783,10 +798,18 @@ def get_asset(path: str):
 def cloud_file(file_path: str, download: bool = False):
     """Sirve un artefacto (foto/audio/MP4) al dashboard público.
 
-    Solo dentro de assets/projects/exports (ver _resolve_asset).
+    Solo dentro de assets/projects/exports (ver _resolve_asset). Si Render se
+    reinició y el archivo ya no está en disco, redirige a la copia en HF.
     """
     file_path = file_path.replace("\\", "/") if ":" not in file_path else file_path
-    file = _resolve_asset(file_path)
+    try:
+        file = _resolve_asset(file_path)
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            remote = cloud_store.remote_url(file_path, download=download)
+            if remote:
+                return RedirectResponse(remote, status_code=307)
+        raise
     if download:
         return FileResponse(str(file), filename=file.name, content_disposition_type="attachment")
     return FileResponse(str(file))

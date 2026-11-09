@@ -1,55 +1,128 @@
-# PUBLICAR AI UGC STUDIO — pasos exactos (gratis, sin tarjeta)
+# PUBLICAR / OPERAR AI UGC STUDIO (gratis, sin tarjeta)
 
-No hay forma de publicar un backend sin una cuenta. Por eso necesitas 2 cuentas
-gratuitas (sin tarjeta): **Hugging Face** (motor GPU) y **Render o Fly**
-(backend). Todo lo demás ya está preparado y probado.
+El backend y el dashboard **ya están publicados**. Este documento es el manual
+para redesplegar, arrancar el worker y verificar.
 
-## Paso 1 — Hugging Face (motor ZeroGPU) · 3 minutos
+## URLs actuales
 
-1. Entra en <https://huggingface.co>, **Sign up** (gratis, sin tarjeta).
-2. Haz clic en tu avatar → **Settings** → **Access Tokens**.
-3. **Create new token** → nombre: `studio-deploy` → rol: **Write** → Create.
-4. Copia el token (empieza por `hf_`). Pégalo aquí en el chat **o** ejecútalo tú:
-   ```powershell
-   $env:HF_TOKEN = "hf_tu_token"
-   .venv\Scripts\python.exe cloud\deploy_hf.py
-   ```
-   Eso crea tu Space (`<usuario>/ai-ugc-studio-motor`), sube el adaptador y
-   devuelve la `SPACE_URL`. En el Space, espera a que ponga **Running**
-   (puede tardar unos minutos la primera vez).
-5. Autorizas solo: **crear un Space público** en tu cuenta y **subir 3 archivos**
-   (`app.py`, `requirements.txt`, `README.md`). Nada más.
+- Dashboard: https://josjshid99-ai-ugc-studio-web.static.hf.space
+- Backend: https://ai-ugc-studio-backend.onrender.com
+- Estado de la cola: https://ai-ugc-studio-backend.onrender.com/api/cloud/status
 
-## Paso 2 — Backend (API) · 5 minutos
+## 1. Desplegar el backend (Render free)
 
-Opción A (Render, gratis sin tarjeta):
-1. Sube este proyecto a GitHub (gratis).
-2. <https://render.com> → **New Web Service** → conecta el repo.
-3. Variables de entorno:
-   - `CLOUD_API_TOKEN` = token fuerte que elijas (p. ej. 32 letras).
-   - `INFERENCE_URL` = la `SPACE_URL` del paso 1.
-   - `CLOUD_MODE` = `FREE_CLOUD` (resto por defecto).
-4. Deploy → obtienes `https://<nombre>.onrender.com`.
+El servicio `ai-ugc-studio-backend` está conectado al repo
+`josephhuete57-sudo/ai-ugc-studio-cloud` y **redespliega solo** con cada push a
+`main` (build: `pip install -r app/requirements.txt`).
 
-Opción B (Fly): `flyctl auth login` en tu PC y `flyctl deploy` con `cloud/fly.toml`.
-(Nota: Fly ya no tiene plan 100 % gratis; Render sí.)
+Variables (Render → Environment):
 
-## Paso 3 — Frontend
+| Variable | Valor |
+|---|---|
+| `CLOUD_INFERENCE_MODE` | `kaggle` |
+| `CLOUD_WORKER_KEY` | generada por Render (opcional; la firma Ed25519 no la necesita) |
+| `MAX_UPLOAD_MB` | `100` |
+| `HF_TOKEN` | *opcional*: tu token HF (Write) para persistencia |
+| `HF_REPO` | *opcional*: `josjshid99/ai-ugc-studio-state` |
+| `HF_REPO_TYPE` | `model` |
 
-El dashboard vive en el mismo hosting que el backend (o en GitHub Pages).
-En la cabecera del dashboard pega la **URL del backend** y el **token**
-(se guarda en tu navegador). Modo cloud: ningún modelo corre en tu PC.
+Con `HF_TOKEN` + `HF_REPO`, Render guarda `state/studio.db` y `media/*` en HF:
+los proyectos y los MP4 sobreviven a los reinicios (disco efímero de Render).
+Sin esas variables la app funciona igual, pero un reinicio borra el historial.
 
-## Costes y límites (gratuitos)
+Comprobar:
 
-- **HF Space ZeroGPU**: GPU gratuita con cola y límites de tiempo por petición.
-  Los trabajos largos pueden tardar o fallar si la cola gratuita está llena
-  (el backend guarda el estado `failed` y no finge éxito).
-- **Render free**: el servicio se duerme tras 15 min sin uso (30 s para despertar).
-- **Fish Audio**: opcional y de pago por uso (sin saldo → TTS remoto gratuito).
-- **Pago**: solo si tú activas `CLOUD_MODE=CLOUD_GPU` + `ALLOW_PAID=1`. Por defecto, imposible.
+```powershell
+Invoke-WebRequest https://ai-ugc-studio-backend.onrender.com/api/cloud/status
+```
+
+Debe responder `mode: kaggle` y `worker_configured: true`.
+
+## 2. Desplegar el dashboard (HF Static)
+
+```powershell
+.venv\Scripts\python.exe cloud\deploy_frontend.py
+```
+
+Sube `cloud/frontend_static/` al Space `<usuario>/ai-ugc-studio-web` (SDK
+`static`, gratis) e imprime la URL.
+
+## 3. Arrancar el worker GPU (Kaggle)
+
+Requisito: cuenta de Kaggle con **verificación telefónica** (SMS, sin tarjeta).
+Sin ella el kernel no recibe GPU ni internet.
+
+```powershell
+# Empaqueta el worker con el backend y la clave privada de firma (no se publica)
+.venv\Scripts\python.exe cloud\pack_kernel.py https://ai-ugc-studio-backend.onrender.com
+
+# Comprueba la inyección (sin imprimir la clave)
+.venv\Scripts\python.exe cloud\_check_build.py
+
+# Publica y ejecuta el kernel privado
+.venv\Scripts\python.exe -m kaggle kernels push -p cloud\worker\kaggle\_build
+```
+
+- `_build/` está en `.gitignore`: la clave privada Ed25519 nunca llega a GitHub.
+- El kernel sondea la cola cada 30 s y se detiene a los 170 min.
+- Si Kaggle cierra la sesión, relanza el kernel: los trabajos pendientes siguen
+  en la cola del backend.
+
+Estado del worker:
+
+```powershell
+.venv\Scripts\python.exe -m kaggle kernels status josephfrancia25/ai-ugc-studio-gpu-worker
+```
+
+Logs:
+
+```powershell
+.venv\Scripts\python.exe -m kaggle kernels output josephfrancia25/ai-ugc-studio-gpu-worker -p cloud\data\kaggle_out
+```
+
+## 4. Verificar de punta a punta
+
+En local (simula Render, puerto 8003, sin GPU):
+
+```powershell
+$env:CLOUD_INFERENCE_MODE="kaggle"; $env:CLOUD_WORKER_KEY=""; $env:HF_TOKEN=""; $env:HF_REPO=""
+Start-Process .\.venv\Scripts\python.exe -ArgumentList "-m","uvicorn","app.main:app","--host","127.0.0.1","--port","8003" -WindowStyle Hidden
+.venv\Scripts\python.exe tests\test_signed_auth.py
+.venv\Scripts\python.exe tests\test_cloud_flow.py
+```
+
+Persistencia HF (requiere `hf auth login`):
+
+```powershell
+.venv\Scripts\python.exe tests\test_hf_store.py
+```
+
+Producción: genera un anuncio en el dashboard público y descarga el MP4. Luego:
+
+```powershell
+ffprobe -v error -show_entries stream=codec_name,width,height -show_entries format=duration archivo.mp4
+```
+
+## 5. Pesos de los modelos
+
+Ya subidos a https://huggingface.co/josjshid99/ai-ugc-studio-weights
+(`wav2lip_gan_state.pth`, `s3fd.pth`, `liveportrait/landmark.onnx`,
+`insightface/models/buffalo_l/{det_10g,2d106det}.onnx`). Si hay que recrearlos:
+
+```powershell
+.venv\Scripts\python.exe cloud\upload_weights_hf.py
+.venv\Scripts\python.exe cloud\upload_lp_weights_hf.py
+```
+
+## 6. Limpiar el estado de pruebas
+
+```powershell
+.venv\Scripts\python.exe cloud\clear_state.py
+```
+
+Borra `state/` y `media/` del repo HF (deja el repo listo para producción).
 
 ## Qué NO necesitas
 
-Python, FFmpeg, LivePortrait ni Wav2Lip en tu PC para el modo cloud.
-El modo local (`127.0.0.1:8001`) sigue como respaldo y no se modificó.
+Python, FFmpeg, LivePortrait ni Wav2Lip en tu PC para el modo cloud. El modo
+local (`run_studio.bat`, puerto 8001) sigue intacto como respaldo.

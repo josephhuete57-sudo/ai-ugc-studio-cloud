@@ -24,6 +24,9 @@ app/studio.db
 kaggle.json
 cloud/worker/kaggle/cache/
 cloud/worker/kaggle/_build/
+# Artefactos subidos en pruebas locales (no son parte del repo)
+assets/influencers/foto*
+assets/audio/voz*
 cloud/data/
 tests/render_sim_checkout/
 tests/render_sim_venv/
