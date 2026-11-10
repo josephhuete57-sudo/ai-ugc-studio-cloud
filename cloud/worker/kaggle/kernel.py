@@ -333,7 +333,7 @@ def _lp_animate(source: Path, driving: Path) -> Path:
     driving = _trim_clip(driving, float(os.environ.get("DRIVING_SECONDS", "4.0")))
     cmd = [sys.executable, str(repo / "inference.py"),
            "-s", str(source), "-d", str(driving), "-o", str(out_dir),
-           "--source-max-dim", "640"]
+           "--source-max-dim", os.environ.get("LP_MAX_DIM", "640")]
     if on_gpu:
         cmd += ["--flag-use-half-precision"]
     else:

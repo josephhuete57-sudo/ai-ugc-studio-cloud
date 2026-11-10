@@ -1,0 +1,47 @@
+name: AI UGC worker (free CPU)
+
+# Alternativa gratuita cuando Kaggle cancela la sesion: runner CPU de GitHub
+# Actions (sin tarjeta, sin GPU de pago). Ejecuta el mismo worker del proyecto.
+on:
+  workflow_dispatch:
+  push:
+    branches: [worker-cpu]
+
+concurrency:
+  group: ugc-worker
+  cancel-in-progress: false
+
+jobs:
+  worker:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Dependencias del sistema
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq ffmpeg git fonts-dejavu-core
+
+      - name: Dependencias Python
+        run: |
+          python -m pip install -q --upgrade pip
+          python -m pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          python -m pip install -q "numpy<2" onnxruntime edge-tts tyro pykalman lmdb librosa \
+            soundfile huggingface_hub requests cryptography opencv-python-headless scipy \
+            imageio imageio-ffmpeg rich matplotlib ffmpeg-python
+
+      - name: Worker
+        env:
+          BACKEND_URL: https://ai-ugc-studio-backend.onrender.com
+          WORKER_PRIV_HEX: ${{ secrets.WORKER_PRIV_HEX }}
+          MAX_RUNTIME_MIN: "300"
+          DRIVING_SECONDS: "2.0"
+          LP_MAX_DIM: "384"
+          PYTHONIOENCODING: utf-8
+          PYTHONUTF8: "1"
+        run: python cloud/worker/kaggle/kernel.py
