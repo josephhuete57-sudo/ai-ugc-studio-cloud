@@ -256,7 +256,7 @@ def _photo_motion(photo: Path, seconds: float = 6.0) -> Path:
         raise RuntimeError("ffmpeg no disponible para animar la foto")
     out = WORK / f"photo_motion_{int(time.time())}.mp4"
     base = "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280"
-    zoom = (base + ",zoompan=z='min(zoom+0.0006,1.12)':x='iw/2-(iw/zoom/2)':"
+    zoom = (base + ",zoompan=z='min(1+0.0006*on,1.12)':x='iw/2-(iw/zoom/2)':"
             "y='ih/2-(ih/zoom/2)':d=1:s=720x1280:fps=24,format=yuv420p")
     # Cualquier relación de aspecto vale: primero se cubre 720x1280 y luego se
     # hace el zoom. Si zoompan fallara en el ffmpeg del runner, queda el clip fijo.
