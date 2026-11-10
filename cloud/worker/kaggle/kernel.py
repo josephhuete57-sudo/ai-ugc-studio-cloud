@@ -67,6 +67,13 @@ def _ensure_deps() -> None:
         ("rich", "rich"),
         ("imageio", "imageio"),
         ("matplotlib", "matplotlib"),
+        # LivePortrait los importa en inference.py (no vienen en el runner).
+        ("skimage", "scikit-image==0.24.0"),
+        ("albumentations", "albumentations==1.4.10"),
+        ("PIL", "pillow"),
+        ("yaml", "pyyaml"),
+        ("tqdm", "tqdm"),
+        ("onnx", "onnx"),
     ]:
         try:
             __import__(mod)
@@ -81,7 +88,8 @@ def _ensure_deps() -> None:
             # se cae a la variante CPU (LivePortrait sigue funcionando en GPU con torch).
             _log(f"Fallback: instalando deps sin {onnx_pkg}")
             _pip(*[p for p in missing if p != onnx_pkg], "onnxruntime")
-    for mod in ("onnxruntime", "tyro", "pykalman", "lmdb", "librosa", "edge_tts"):
+    for mod in ("onnxruntime", "tyro", "pykalman", "lmdb", "librosa", "edge_tts",
+                "skimage", "albumentations", "PIL", "onnx"):
         try:
             __import__(mod)
             _log(f"DEP OK {mod}")
@@ -172,6 +180,16 @@ def _progress(job_id: str, step: str, pct: float | None = None) -> None:
               json={"id": job_id, "step": step, "progress": pct})
     except Exception:
         pass
+
+
+def _err_text(exc: BaseException, limit: int = 480) -> str:
+    """El backend corta el error a 500 caracteres desde el INICIO.
+
+    Un traceback útil termina en la última línea (tipo + mensaje), así que se
+    envía la cola del texto para que no se pierda la causa real.
+    """
+    msg = f"{type(exc).__name__}: {exc}"
+    return msg if len(msg) <= limit else "…" + msg[-limit:]
 
 
 def _result(job_id: str, status: str, result_path: str = "", error: str = "") -> None:
@@ -598,7 +616,7 @@ def main() -> None:
             _result(job["id"], "completed", key)
             _log(f"Job {job['id']} completado -> {key}")
         except Exception as exc:
-            _result(job["id"], "failed", "", str(exc)[:500])
+            _result(job["id"], "failed", "", _err_text(exc))
             _log(f"Job {job['id']} failed: {exc}")
         finally:
             gc.collect()
