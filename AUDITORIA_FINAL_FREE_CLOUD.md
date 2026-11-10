@@ -1,99 +1,88 @@
-# AUDITORÍA FINAL — FREE CLOUD (2026-11-09)
+# AUDITORÍA FINAL — FREE CLOUD (actualizada 2026-11-10)
 
-**Coste: 0 USD.** Sin tarjetas, sin suscripciones, sin `ALLOW_PAID`, sin HF PRO,
-sin Replicate, sin Colab, sin GPU de pago.
+**Coste: 0 USD.** Sin tarjetas, sin `ALLOW_PAID`, sin HF PRO, sin Replicate, sin Colab.
 
 ## URLs
 
 | Servicio | URL | Estado real |
 |---|---|---|
-| Dashboard | https://josjshid99-ai-ugc-studio-web.static.hf.space | ✅ 200 (HTML 13.090 B, JS 19.015 B, CSS 3.825 B) |
-| Backend API | https://ai-ugc-studio-backend.onrender.com | ✅ 200 `/api/cloud/status` (`mode=kaggle`) |
-| Repo código | https://github.com/josephhuete57-sudo/ai-ugc-studio-cloud | ✅ `main` @ `0123bee` |
-| Pesos (HF) | https://huggingface.co/josjshid99/ai-ugc-studio-weights | ✅ 5 archivos |
-| Estado (HF) | https://huggingface.co/josjshid99/ai-ugc-studio-state | ⚠️ creado, vacío, **no conectado a Render** |
-| Worker GPU | Kaggle `josephfrancia25/ai-ugc-studio-gpu-worker` | ⛔ BLOQUEADO: falta verificación telefónica |
+| Dashboard | https://josjshid99-ai-ugc-studio-web.static.hf.space | ✅ 200 |
+| Backend API | https://ai-ugc-studio-backend.onrender.com | ✅ 200 `mode=kaggle` |
+| Repo código | https://github.com/josephhuete57-sudo/ai-ugc-studio-cloud | ✅ `main` @ `afbf637` |
+| Pesos (HF) | https://huggingface.co/josjshid99/ai-ugc-studio-weights | ✅ 5 archivos (HTTP 200) |
+| Pesos oficiales LP | https://huggingface.co/KwaiVGI/LivePortrait | ✅ 5 `.pth` (HTTP 200) |
+| Worker GPU | Kaggle `josephfrancia25/ai-ugc-studio-gpu-worker` | ⏳ **QUEUED** (sin cupo de GPU libre) |
 
 ## Tabla de estado
 
 | Componente | Resultado |
 |---|---|
-| Dashboard público | **LIVE** |
-| Backend Render | **LIVE** |
-| Kaggle GPU | **BLOCKED** (sin `nvidia-smi`, `torch 2.11.0+cpu`, `cuda False`) |
-| Internet worker | **FAILED** (`gaierror(-3)`, DNS bloqueado por falta de verificación) |
-| LivePortrait remoto | **NO EJECUTADO** (requiere GPU) |
-| Wav2Lip remoto | **NO EJECUTADO** (requiere GPU) |
-| TTS remoto | **NO EJECUTADO** (edge-tts requiere internet en Kaggle) |
-| FFmpeg remoto | **NO EJECUTADO** (requiere sesión con internet) |
-| Almacenamiento remoto | **PARCIAL**: entrega pública OK; espejo HF desactivado |
-| MP4 real generado en GPU | **NO** |
-| Descarga pública | **VERIFIED** (cadena de entrega real, archivo real) |
+| Dashboard | **LIVE** |
+| Render | **LIVE** |
+| Kaggle verificado (GPU asignada) | **YES** — el worker reportó `Tesla T4` |
+| GPU NVIDIA | **ONLINE** (sesión real ejecutada hoy) |
+| Internet | **OK** — HTTPS a HF funcionó (respuesta real 404 de la API) |
+| Worker | **QUEUED** (nueva versión esperando cupo de GPU) |
+| LivePortrait GPU | **FAILED** → causa encontrada y corregida (rutas de pesos) |
+| Wav2Lip | **NO EJECUTADO** (no llegó a esa etapa) |
+| edge-tts | **NO EJECUTADO** |
+| FFmpeg | **NO EJECUTADO** |
+| Almacenamiento | **PARCIAL** — entrega pública OK; espejo HF desactivado (`persistence:false`) |
+| MP4 NUEVO generado | **NO** |
+| Descarga pública | **VERIFIED** (archivo real subido por el worker, no generación nueva) |
 | Coste | **0 USD** |
 
-## Verificado de verdad en esta ejecución
+## Prueba E2E lanzada (pendiente de GPU)
 
-| Prueba | Resultado |
-|---|---|
-| `tests/test_prod_worker.py` contra Render (producción) | ✅ `PROD_CHAIN_OK` |
-| Firma Ed25519 contra producción | ✅ sin firma 401 · firmada 200 · ventana ±900 s |
-| Subida real de MP4 por el worker | ✅ 457.960 B → `exports/anuncio_1794251176.mp4` |
-| Descarga pública inline | ✅ 200 `video/mp4` 457.960 B |
-| Descarga pública attachment | ✅ 200 `attachment; filename="anuncio_1794251176.mp4"` |
-| CORS dashboard → backend | ✅ `access-control-allow-origin: *` |
-| Diagnóstico Kaggle v4 | ⛔ `NVIDIA_SMI_FAIL`, `TORCH 2.11.0+cpu cuda False`, `NET_FAIL gaierror`, `DIAG_DONE gpu=False net=False` |
-| Persistencia HF en Render | ⚠️ `persistence=false` (faltan `HF_TOKEN`/`HF_REPO`) |
+- Proyecto **1**, job local **1**, trabajo externo **`ext_6fcae63da9`**, estado `pending`.
+- Foto + vídeo de referencia + guion subidos por la API pública de Render.
+- El worker lo procesará al arrancar la sesión de Kaggle (sin intervención manual).
 
-**URL pública del MP4 de prueba (cadena de entrega real):**
-https://ai-ugc-studio-backend.onrender.com/api/cloud/files/anuncio_1794251176.mp4
+## Bug real encontrado en la primera ejecución GPU (corregido)
 
-Este MP4 es un archivo real de 457.960 B (H.264 720x1280 24 fps + AAC 48 kHz,
-5,0 s) subido por el endpoint del worker y descargado por HTTP público. **No** es
-una generación nueva en GPU: la GPU de Kaggle sigue bloqueada.
+La sesión GPU **sí arrancó** (Tesla T4, internet OK) y falló con:
 
-## Bugs reales corregidos en esta ejecución
+```
+404 Entry Not Found:
+https://huggingface.co/KlingTeam/LivePortrait/resolve/main/pretrained_weights/liveportrait/base_models/appearance_feature_extractor.pth
+```
 
-1. **`/api/cloud/files/<nombre>` devolvía 404** para archivos en `exports/`
-   (resolvía solo contra la raíz del repo). Ahora busca también en
-   `assets/`, `projects/` y `exports/`, manteniendo el bloqueo de traversal.
-   Era un fallo que habría impedido descargar cualquier MP4 del dashboard.
-2. `Path("")` == `Path(".")` y `.exists()` es `True` → el flujo sin audio subido
-   daba el audio por válido y FFmpeg habría fallado. Ahora `is_file()` + tamaño.
-3. `on_gpu = _gpu() != "CPU"` era `True` para `"CPU(desconocida)"` → habría
-   usado `--flag-use-half-precision` en CPU.
-4. Si Kaggle entrega GPU pero `torch` es `+cpu`, LivePortrait habría corrido en
-   CPU (~20 min/vídeo). Añadido `_ensure_torch_cuda()` (reinstala torch CUDA).
-5. Validación de entradas descargadas (`_require_input`) con error claro.
-6. `/api/cloud/status` expone `persistence` (booleano, sin secretos).
+Causa: el repo oficial de LivePortrait publica los pesos en
+`liveportrait/base_models/...` (sin el prefijo `pretrained_weights/`). El worker
+pedía la ruta con prefijo y recibía 404 en **todos** los jobs.
 
-## Único bloqueo (autorización indispensable)
+Corregido en `cloud/worker/kaggle/kernel.py` (`_lp_weights`): descarga desde
+`liveportrait/...` y copia a `pretrained_weights/liveportrait/...`, que es donde
+LivePortrait los busca. Verificado con `HEAD` real: **10/10 URLs devuelven 200**
+(3.387.959 / 112.545.506 / 221.813.590 / 182.180.086 / 2.393.098 B oficiales y
+los 5 del espejo propio).
 
-Kaggle exige **verificación telefónica** (SMS, gratis, sin tarjeta) para dar GPU
-e internet. Comprobado hoy con el diagnóstico v4: `NVIDIA_SMI_FAIL` (no hay GPU
-asignada) y `gaierror(-3)` (DNS bloqueado).
+## Bloqueo actual (externo, no de código)
 
-👉 https://www.kaggle.com/settings → *Phone Verification*.
+La cuenta ya tiene GPU e internet, pero Kaggle limita a **2 sesiones GPU
+simultáneas** y ahora mismo no hay cupo libre: el kernel queda en `QUEUED`.
+Durante la espera:
 
-## Acción opcional (no bloquea la generación)
+- el trabajo permanece `pending` en la cola del backend (no se pierde);
+- al liberarse una GPU, el worker arranca, reclama `ext_6fcae63da9` y ejecuta
+  LivePortrait → Wav2Lip → edge-tts → FFmpeg → subida del MP4.
 
-Añadir en Render → Environment: `HF_TOKEN` (token HF Write del usuario) y
-`HF_REPO=josjshid99/ai-ugc-studio-state`, `HF_REPO_TYPE=model`. Sin ellas el
-backend funciona igual, pero un reinicio de Render borra proyectos y MP4
-(disco efímero). Con ellas, `/api/cloud/status` mostrará `persistence: true`.
+## Nota de persistencia
 
-## Tras la verificación telefónica
+`/api/cloud/status` → `persistence:false`: faltan `HF_TOKEN` y `HF_REPO` en
+Render. Consecuencia real observada: Render se reinició y la base volvió a 0
+proyectos. Añadir en Render → Environment (lo pega el usuario, nunca en el chat):
 
-1. `kaggle kernels push -p cloud/worker/kaggle_diag` → debe dar
-   `NVIDIA_SMI_RC 0`, `GPU Tesla T4`, `cuda True`, `DNS_OK`, `HF_W2L_OK`.
-2. `python cloud/pack_kernel.py https://ai-ugc-studio-backend.onrender.com`
-3. `kaggle kernels push -p cloud/worker/kaggle/_build`
-4. `/api/cloud/status` → `worker.online=true`, `worker.gpu="Tesla T4"`.
-5. Generar un anuncio desde el dashboard y validar el MP4 con `ffprobe`.
+```
+HF_TOKEN=<token HF Write>
+HF_REPO=josjshid99/ai-ugc-studio-state
+HF_REPO_TYPE=model
+```
 
 ## Lo que NO se ha hecho
 
-- No se activó ningún servicio de pago ni `ALLOW_PAID`.
-- No se publicó ningún secreto (`.env`, `kaggle.json`, clave privada Ed25519).
+- No se activó ningún servicio de pago.
+- No se publicó ningún secreto.
 - No se procesó vídeo en el PC del usuario.
 - No se tocó el puerto 8000 ni la app local del 8001.
-- **No se afirma generación real en GPU**: sigue bloqueada por Kaggle.
+- **No se declara MP4 nuevo generado**: el trabajo sigue en cola por falta de cupo GPU.
