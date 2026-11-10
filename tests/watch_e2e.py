@@ -27,6 +27,10 @@ def log(msg: str) -> None:
 
 
 def main() -> None:
+    global PID, OUT
+    if len(sys.argv) > 2:
+        PID = int(sys.argv[2])
+        OUT = Path(rf"C:\AI_UGC_STUDIO\exports\proyecto_{PID}.mp4")
     hours = float(sys.argv[1]) if len(sys.argv) > 1 else 4.0
     deadline = time.time() + hours * 3600
     log(f"WATCH start project={PID} hours={hours}")

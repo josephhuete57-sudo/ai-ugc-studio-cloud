@@ -48,8 +48,9 @@ def _ensure_deps() -> None:
     imageio-ffmpeg y ffmpeg. Solo se instala lo ausente.
     """
     missing = []
+    onnx_pkg = "onnxruntime-gpu" if _has_nvidia() else "onnxruntime"
     for mod, pkg in [
-        ("onnxruntime", "onnxruntime-gpu"),
+        ("onnxruntime", onnx_pkg),
         ("cv2", "opencv-python-headless"),
         ("huggingface_hub", "huggingface_hub"),
         ("requests", "requests"),
@@ -78,8 +79,8 @@ def _ensure_deps() -> None:
         except subprocess.CalledProcessError:
             # onnxruntime-gpu puede no tener rueda para la versión de Python:
             # se cae a la variante CPU (LivePortrait sigue funcionando en GPU con torch).
-            _log("Fallback: instalando deps sin onnxruntime-gpu")
-            _pip(*[p for p in missing if p != "onnxruntime-gpu"], "onnxruntime")
+            _log(f"Fallback: instalando deps sin {onnx_pkg}")
+            _pip(*[p for p in missing if p != onnx_pkg], "onnxruntime")
     for mod in ("onnxruntime", "tyro", "pykalman", "lmdb", "librosa", "edge_tts"):
         try:
             __import__(mod)
@@ -269,6 +270,55 @@ def _require_input(path: Path, label: str) -> None:
         raise RuntimeError(f"Entrada inválida ({label}): no se pudo descargar del backend")
 
 
+def _trim_clip(src: Path, seconds: float) -> Path:
+    """Recorta el vídeo de referencia (LivePortrait en CPU va frame a frame)."""
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return src
+    out = WORK / f"drv_trim_{int(time.time())}.mp4"
+    try:
+        subprocess.run([ffmpeg, "-y", "-i", str(src), "-t", f"{seconds:.2f}", "-an",
+                        "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+                        str(out)],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       timeout=180)
+    except Exception as exc:
+        _log(f"No se pudo recortar el driving ({exc!r}); se usa el original")
+        return src
+    if out.is_file() and out.stat().st_size > 2048:
+        _log(f"Driving recortado a {seconds}s para CPU ({out.stat().st_size} B)")
+        return out
+    return src
+
+
+def _loop_to_duration(visual: Path, audio: Path) -> Path:
+    """Repite el clip animado hasta cubrir el audio (CPU: clip corto)."""
+    import json as _json
+
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        return visual
+    dur = 8.0
+    try:
+        pr = subprocess.run(["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+                             "-of", "json", str(audio)], capture_output=True, text=True,
+                            timeout=60)
+        dur = float(_json.loads(pr.stdout)["format"]["duration"])
+    except Exception:
+        pass
+    out = WORK / f"visual_loop_{int(time.time())}.mp4"
+    try:
+        subprocess.run([ffmpeg, "-y", "-stream_loop", "-1", "-i", str(visual),
+                        "-t", f"{dur:.2f}", "-an", "-c:v", "libx264", "-preset", "ultrafast",
+                        "-pix_fmt", "yuv420p", str(out)],
+                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                       timeout=900)
+    except Exception as exc:
+        _log(f"No se pudo alargar el clip ({exc!r}); se usa el original")
+        return visual
+    return out if out.is_file() and out.stat().st_size > 2048 else visual
+
+
 def _lp_animate(source: Path, driving: Path) -> Path:
     _require_input(source, "foto")
     _require_input(driving, "vídeo de referencia")
@@ -277,12 +327,17 @@ def _lp_animate(source: Path, driving: Path) -> Path:
     out_dir = WORK / f"anim_{int(time.time())}"
     out_dir.mkdir(parents=True, exist_ok=True)
     on_gpu = _on_gpu()
+    # El clip de referencia se recorta siempre: LivePortrait es el paso caro y
+    # el montaje final repite el clip hasta cubrir la voz. En GPU tarda
+    # segundos; en CPU es la diferencia entre minutos y horas.
+    driving = _trim_clip(driving, float(os.environ.get("DRIVING_SECONDS", "4.0")))
     cmd = [sys.executable, str(repo / "inference.py"),
-           "-s", str(source), "-d", str(driving), "-o", str(out_dir)]
+           "-s", str(source), "-d", str(driving), "-o", str(out_dir),
+           "--source-max-dim", "640"]
     if on_gpu:
         cmd += ["--flag-use-half-precision"]
     else:
-        cmd += ["--flag-force-cpu", "--no-flag-use-half-precision", "--source-max-dim", "512"]
+        cmd += ["--flag-force-cpu", "--no-flag-use-half-precision"]
     log = out_dir / "liveportrait.log"
     with log.open("w", encoding="utf-8", errors="replace") as fh:
         proc = subprocess.run(cmd, cwd=str(repo), stdout=fh, stderr=subprocess.STDOUT,
@@ -485,8 +540,12 @@ def process(job: dict) -> Path:
         animated = _lp_animate(photo, drv)
         visual = animated
         if payload.get("use_lipsync"):
+            if not _on_gpu():
+                # CPU: LivePortrait trabaja sobre un clip corto; se repite hasta
+                # cubrir el audio para que Wav2Lip sincronice todo el vídeo.
+                visual = _loop_to_duration(animated, audio_path)
             _progress(jid, "Wav2Lip…", 62)
-            visual = _lipsync(animated, audio_path)
+            visual = _lipsync(visual, audio_path)
         _progress(jid, "FFmpeg…", 80)
         subs = _srt(payload.get("script") or " ", audio_path)
         final = _edit(visual, audio_path, payload.get("title", ""), subs,
