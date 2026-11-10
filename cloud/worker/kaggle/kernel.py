@@ -255,16 +255,19 @@ def _photo_motion(photo: Path, seconds: float = 6.0) -> Path:
     if not ffmpeg:
         raise RuntimeError("ffmpeg no disponible para animar la foto")
     out = WORK / f"photo_motion_{int(time.time())}.mp4"
-    vf = ("scale=1440:-2,crop=1440:2560,"
-          "zoompan=z='min(zoom+0.0006,1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
-          "d=1:s=720x1280:fps=24,format=yuv420p")
-    subprocess.run([ffmpeg, "-y", "-loop", "1", "-i", str(photo), "-t", f"{seconds:.2f}",
-                    "-vf", vf, "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
-                    str(out)],
-                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                   timeout=300)
-    if not out.is_file() or out.stat().st_size < 2048:
-        raise RuntimeError("FFmpeg no pudo animar la foto")
+    base = "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280"
+    zoom = (base + ",zoompan=z='min(zoom+0.0006,1.12)':x='iw/2-(iw/zoom/2)':"
+            "y='ih/2-(ih/zoom/2)':d=1:s=720x1280:fps=24,format=yuv420p")
+    # Cualquier relación de aspecto vale: primero se cubre 720x1280 y luego se
+    # hace el zoom. Si zoompan fallara en el ffmpeg del runner, queda el clip fijo.
+    for vf in (zoom, base + ",format=yuv420p"):
+        subprocess.run([ffmpeg, "-y", "-loop", "1", "-i", str(photo), "-t", f"{seconds:.2f}",
+                        "-vf", vf, "-c:v", "libx264", "-preset", "ultrafast",
+                        "-pix_fmt", "yuv420p", str(out)],
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=300)
+        if out.is_file() and out.stat().st_size > 2048:
+            return out
+    raise RuntimeError("FFmpeg no pudo animar la foto")
     return out
 
 
