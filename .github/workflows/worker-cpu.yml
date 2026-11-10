@@ -33,16 +33,13 @@ jobs:
           python -m pip install -q torch torchvision --index-url https://download.pytorch.org/whl/cpu
           python -m pip install -q "numpy<2" onnxruntime edge-tts tyro pykalman lmdb librosa \
             soundfile huggingface_hub requests cryptography opencv-python-headless scipy \
-            imageio imageio-ffmpeg rich matplotlib ffmpeg-python "scikit-image==0.24.0" \
-            "albumentations==1.4.10" pillow pyyaml tqdm onnx
+            imageio imageio-ffmpeg rich matplotlib ffmpeg-python pillow pyyaml tqdm
 
       - name: Worker
         env:
           BACKEND_URL: https://ai-ugc-studio-backend.onrender.com
           WORKER_PRIV_HEX: ${{ secrets.WORKER_PRIV_HEX }}
           MAX_RUNTIME_MIN: "300"
-          DRIVING_SECONDS: "2.0"
-          LP_MAX_DIM: "384"
           PYTHONIOENCODING: utf-8
           PYTHONUTF8: "1"
         run: python cloud/worker/kaggle/kernel.py

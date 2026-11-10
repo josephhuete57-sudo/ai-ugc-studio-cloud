@@ -1,8 +1,8 @@
-"""Worker GPU (Kaggle) — AI UGC STUDIO FREE CLOUD.
+"""Worker remoto (Kaggle o GitHub Actions) — AI UGC STUDIO FREE CLOUD.
 
-Polls la cola del backend, ejecuta en GPU: LivePortrait, Wav2Lip, FFmpeg y TTS.
-Sin cómputo local: este script corre en Kaggle con GPU T4 gratuita.
-Params por metadata del kernel: BACKEND_URL, WORKER_KEY, HF_TOKEN(optional).
+Polls la cola del backend y ejecuta en CPU/GPU: edge-tts, Wav2Lip y FFmpeg.
+Sin cómputo local: este script corre en la nube gratuita.
+Params: BACKEND_URL, WORKER_KEY, HF_TOKEN(optional).
 """
 from __future__ import annotations
 
@@ -42,10 +42,10 @@ def _pip(*pkgs: str) -> None:
 
 
 def _ensure_deps() -> None:
-    """Instala lo que falta para LivePortrait + Wav2Lip + TTS + FFmpeg.
+    """Instala lo que falta para Wav2Lip + TTS + FFmpeg.
 
-    Kaggle ya trae torch/CUDA, cv2, skimage, albumentations, scipy, onnx,
-    imageio-ffmpeg y ffmpeg. Solo se instala lo ausente.
+    Kaggle ya trae torch/CUDA, cv2, scipy, imageio-ffmpeg y ffmpeg.
+    Solo se instala lo ausente.
     """
     missing = []
     onnx_pkg = "onnxruntime-gpu" if _has_nvidia() else "onnxruntime"
@@ -67,13 +67,10 @@ def _ensure_deps() -> None:
         ("rich", "rich"),
         ("imageio", "imageio"),
         ("matplotlib", "matplotlib"),
-        # LivePortrait los importa en inference.py (no vienen en el runner).
-        ("skimage", "scikit-image==0.24.0"),
-        ("albumentations", "albumentations==1.4.10"),
+        # Wav2Lip: detección de cara (torchvision) y lectura de imagen (pillow).
+        ("torchvision", "torchvision"),
         ("PIL", "pillow"),
-        ("yaml", "pyyaml"),
         ("tqdm", "tqdm"),
-        ("onnx", "onnx"),
     ]:
         try:
             __import__(mod)
@@ -89,7 +86,7 @@ def _ensure_deps() -> None:
             _log(f"Fallback: instalando deps sin {onnx_pkg}")
             _pip(*[p for p in missing if p != onnx_pkg], "onnxruntime")
     for mod in ("onnxruntime", "tyro", "pykalman", "lmdb", "librosa", "edge_tts",
-                "skimage", "albumentations", "PIL", "onnx"):
+                "torchvision", "PIL"):
         try:
             __import__(mod)
             _log(f"DEP OK {mod}")
@@ -247,28 +244,28 @@ def _hf_get(filename: str, dest: Path, repo: str | None = None) -> Path:
     return dest
 
 
-def _lp_weights() -> None:
-    repo_root = CACHE / "LivePortrait"
-    # Modelos base y retargeting: repo oficial (las rutas NO llevan
-    # 'pretrained_weights/' en HF; se copian a la estructura que espera
-    # LivePortrait: pretrained_weights/liveportrait/...).
-    official = [
-        "liveportrait/base_models/appearance_feature_extractor.pth",
-        "liveportrait/base_models/motion_extractor.pth",
-        "liveportrait/base_models/spade_generator.pth",
-        "liveportrait/base_models/warping_module.pth",
-        "liveportrait/retargeting_models/stitching_retargeting_module.pth",
-    ]
-    for fname in official:
-        _hf_get(fname, repo_root / "pretrained_weights" / fname, repo="KwaiVGI/LivePortrait")
-    # Landmark + insightface buffalo_l: espejo propio (estable, sin Drive).
-    for fname in [
-        "liveportrait/landmark.onnx",
-        "insightface/models/buffalo_l/det_10g.onnx",
-        "insightface/models/buffalo_l/2d106det.onnx",
-    ]:
-        _hf_get(fname, repo_root / "pretrained_weights" / fname)
-    _log("Pesos LivePortrait + insightface listos")
+def _photo_motion(photo: Path, seconds: float = 6.0) -> Path:
+    """Clip vertical con zoom lento a partir de la foto (sin IA, FFmpeg puro).
+
+    Sustituye a LivePortrait para el paso 'animacion': no inventa movimiento
+    facial, solo un Ken Burns honesto que sirve de base para Wav2Lip/editor.
+    """
+    _require_input(photo, "foto")
+    ffmpeg = shutil.which("ffmpeg")
+    if not ffmpeg:
+        raise RuntimeError("ffmpeg no disponible para animar la foto")
+    out = WORK / f"photo_motion_{int(time.time())}.mp4"
+    vf = ("scale=1440:-2,crop=1440:2560,"
+          "zoompan=z='min(zoom+0.0006,1.12)':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':"
+          "d=1:s=720x1280:fps=24,format=yuv420p")
+    subprocess.run([ffmpeg, "-y", "-loop", "1", "-i", str(photo), "-t", f"{seconds:.2f}",
+                    "-vf", vf, "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
+                    str(out)],
+                   check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                   timeout=300)
+    if not out.is_file() or out.stat().st_size < 2048:
+        raise RuntimeError("FFmpeg no pudo animar la foto")
+    return out
 
 
 
@@ -286,89 +283,6 @@ def _require_input(path: Path, label: str) -> None:
     """Falla con un mensaje claro si la descarga del backend quedó vacía."""
     if not path.is_file() or path.stat().st_size < 512:
         raise RuntimeError(f"Entrada inválida ({label}): no se pudo descargar del backend")
-
-
-def _trim_clip(src: Path, seconds: float) -> Path:
-    """Recorta el vídeo de referencia (LivePortrait en CPU va frame a frame)."""
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        return src
-    out = WORK / f"drv_trim_{int(time.time())}.mp4"
-    try:
-        subprocess.run([ffmpeg, "-y", "-i", str(src), "-t", f"{seconds:.2f}", "-an",
-                        "-c:v", "libx264", "-preset", "ultrafast", "-pix_fmt", "yuv420p",
-                        str(out)],
-                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       timeout=180)
-    except Exception as exc:
-        _log(f"No se pudo recortar el driving ({exc!r}); se usa el original")
-        return src
-    if out.is_file() and out.stat().st_size > 2048:
-        _log(f"Driving recortado a {seconds}s para CPU ({out.stat().st_size} B)")
-        return out
-    return src
-
-
-def _loop_to_duration(visual: Path, audio: Path) -> Path:
-    """Repite el clip animado hasta cubrir el audio (CPU: clip corto)."""
-    import json as _json
-
-    ffmpeg = shutil.which("ffmpeg")
-    if not ffmpeg:
-        return visual
-    dur = 8.0
-    try:
-        pr = subprocess.run(["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-                             "-of", "json", str(audio)], capture_output=True, text=True,
-                            timeout=60)
-        dur = float(_json.loads(pr.stdout)["format"]["duration"])
-    except Exception:
-        pass
-    out = WORK / f"visual_loop_{int(time.time())}.mp4"
-    try:
-        subprocess.run([ffmpeg, "-y", "-stream_loop", "-1", "-i", str(visual),
-                        "-t", f"{dur:.2f}", "-an", "-c:v", "libx264", "-preset", "ultrafast",
-                        "-pix_fmt", "yuv420p", str(out)],
-                       check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                       timeout=900)
-    except Exception as exc:
-        _log(f"No se pudo alargar el clip ({exc!r}); se usa el original")
-        return visual
-    return out if out.is_file() and out.stat().st_size > 2048 else visual
-
-
-def _lp_animate(source: Path, driving: Path) -> Path:
-    _require_input(source, "foto")
-    _require_input(driving, "vídeo de referencia")
-    repo = _clone("https://github.com/KwaiVGI/LivePortrait.git", "LivePortrait")
-    _lp_weights()
-    out_dir = WORK / f"anim_{int(time.time())}"
-    out_dir.mkdir(parents=True, exist_ok=True)
-    on_gpu = _on_gpu()
-    # El clip de referencia se recorta siempre: LivePortrait es el paso caro y
-    # el montaje final repite el clip hasta cubrir la voz. En GPU tarda
-    # segundos; en CPU es la diferencia entre minutos y horas.
-    driving = _trim_clip(driving, float(os.environ.get("DRIVING_SECONDS", "4.0")))
-    cmd = [sys.executable, str(repo / "inference.py"),
-           "-s", str(source), "-d", str(driving), "-o", str(out_dir),
-           "--source-max-dim", os.environ.get("LP_MAX_DIM", "640")]
-    if on_gpu:
-        cmd += ["--flag-use-half-precision"]
-    else:
-        cmd += ["--flag-force-cpu", "--no-flag-use-half-precision"]
-    log = out_dir / "liveportrait.log"
-    with log.open("w", encoding="utf-8", errors="replace") as fh:
-        proc = subprocess.run(cmd, cwd=str(repo), stdout=fh, stderr=subprocess.STDOUT,
-                              timeout=3600,
-                              env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1"))
-    if proc.returncode != 0:
-        tail = log.read_text(encoding="utf-8", errors="replace")[-1800:]
-        raise RuntimeError(f"LivePortrait falló ({proc.returncode}): {tail}")
-    mp4s = sorted(out_dir.rglob("*.mp4"), key=lambda p: p.stat().st_mtime)
-    if not mp4s:
-        tail = log.read_text(encoding="utf-8", errors="replace")[-1800:]
-        raise RuntimeError(f"LivePortrait sin MP4: {tail}")
-    return mp4s[-1]
 
 
 def _patch_w2l(repo: Path) -> None:
@@ -397,22 +311,28 @@ def _w2l_weights() -> str:
 
 
 def _lipsync(face: Path, audio: Path) -> Path:
-    _require_input(face, "vídeo animado")
+    """Wav2Lip sobre una foto (modo estático) o un vídeo, en CPU o GPU."""
+    _require_input(face, "foto/cara")
     _require_input(audio, "audio")
     repo = _clone("https://github.com/Rudrabha/Wav2Lip.git", "Wav2Lip")
     ckpt = _w2l_weights()
+    # Wav2Lip escribe temp/temp.wav y temp/result.avi relativos al cwd.
+    (repo / "temp").mkdir(exist_ok=True)
     out = WORK / f"lipsync_{int(time.time())}.mp4"
     log = WORK / f"lipsync_{int(time.time())}.log"
+    cmd = [sys.executable, str(repo / "inference.py"),
+           "--checkpoint_path", ckpt, "--face", str(face),
+           "--audio", str(audio), "--outfile", str(out),
+           "--pads", "0", "10", "0", "0",
+           "--wav2lip_batch_size", "16", "--face_det_batch_size", "1",
+           "--fps", "24"]
+    if face.suffix.lower() in (".jpg", ".jpeg", ".png"):
+        cmd += ["--static", "True"]
     with log.open("w", encoding="utf-8", errors="replace") as fh:
-        proc = subprocess.run([sys.executable, str(repo / "inference.py"),
-                               "--checkpoint_path", ckpt, "--face", str(face),
-                               "--audio", str(audio), "--outfile", str(out),
-                               "--pads", "0", "10", "0", "0",
-                               "--wav2lip_batch_size", "16", "--face_det_batch_size", "1"],
-                              cwd=str(repo), stdout=fh, stderr=subprocess.STDOUT,
+        proc = subprocess.run(cmd, cwd=str(repo), stdout=fh, stderr=subprocess.STDOUT,
                               timeout=3600,
                               env=dict(os.environ, PYTHONIOENCODING="utf-8", PYTHONUTF8="1"))
-    if proc.returncode != 0 or not out.exists():
+    if proc.returncode != 0 or not out.exists() or out.stat().st_size < 2048:
         tail = log.read_text(encoding="utf-8", errors="replace")[-1800:]
         raise RuntimeError(f"Wav2Lip falló ({proc.returncode}): {tail}")
     return out
@@ -536,8 +456,7 @@ def process(job: dict) -> Path:
     final = None
     if kind == "animacion":
         src = dl(payload["source_path"], "source.jpg")
-        drv = dl(payload["driving_path"], "driving.mp4")
-        final = _lp_animate(src, drv)
+        final = _photo_motion(src)
     elif kind == "lipsync":
         face = dl(payload["face_path"], "face.mp4")
         aud = dl(payload["audio_path"], "audio.wav")
@@ -549,21 +468,17 @@ def process(job: dict) -> Path:
         final = _edit(vis, aud, payload.get("title", ""), subs, "720x1280")
     elif kind == "flujo":
         photo = dl(payload["photo_path"], "foto.jpg")
-        drv = dl(payload["driving_path"], "driving.mp4")
         # Path("") == Path(".") y existe: hay que comprobar is_file(), no exists().
         if not audio_path.is_file() or audio_path.stat().st_size < 1024:
             _progress(jid, "Generando voz (edge-tts)…")
             audio_path = _tts(payload.get("script") or "Anuncio", tmp / "voz.mp3")
-        _progress(jid, "LivePortrait…", 30)
-        animated = _lp_animate(photo, drv)
-        visual = animated
-        if payload.get("use_lipsync"):
-            if not _on_gpu():
-                # CPU: LivePortrait trabaja sobre un clip corto; se repite hasta
-                # cubrir el audio para que Wav2Lip sincronice todo el vídeo.
-                visual = _loop_to_duration(animated, audio_path)
-            _progress(jid, "Wav2Lip…", 62)
-            visual = _lipsync(visual, audio_path)
+        # Cadena sin LivePortrait: la propia foto es la cara de Wav2Lip
+        # (modo estático). El vídeo de referencia del payload se ignora.
+        _progress(jid, "Wav2Lip…", 55)
+        if payload.get("use_lipsync", True):
+            visual = _lipsync(photo, audio_path)
+        else:
+            visual = _photo_motion(photo)
         _progress(jid, "FFmpeg…", 80)
         subs = _srt(payload.get("script") or " ", audio_path)
         final = _edit(visual, audio_path, payload.get("title", ""), subs,
