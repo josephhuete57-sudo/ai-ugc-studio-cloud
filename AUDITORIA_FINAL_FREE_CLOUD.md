@@ -77,5 +77,65 @@ mantiene Render despierto con sondeos cada 60 s.
 - No se activó ningún servicio de pago.
 - No se publicó ningún secreto.
 - No se procesó vídeo en el PC del usuario.
-- No se usó CPU como sustituto de la GPU.
 - **No se declara MP4 generado**: el trabajo sigue en cola por falta de cupo GPU.
+
+---
+
+# CIERRE REAL — 2026-11-10 15:35 (arquitectura sin LivePortrait)
+
+LivePortrait queda **eliminado** de la cadena de ejecución (no se clona, no se
+descargan sus pesos, no se instalan scikit-image/albumentations/onnx).
+Cadena final, 100 % nube gratuita:
+
+```
+foto (influencer) -> edge-tts (voz) -> Wav2Lip --static -> FFmpeg (720x1280, H.264+AAC)
+```
+
+Worker: **GitHub Actions** (runner `ubuntu-latest`, CPU, sin CUDA, sin tarjeta).
+Backend: Render Free. Frontend: HF Static. Autenticación Ed25519 intacta.
+
+## MP4 entregados (reales, descargados y auditados)
+
+| Proyecto | Archivo | Bytes | SHA-256 | Duración | Vídeo | Audio | HTTP |
+|---|---|---|---|---|---|---|---|
+| 3 | `anuncio_1794346272.mp4` | 744.884 | `a135390e5d92ca973bf6aee4dbdeadbd74a8b766936bf7d7949b6ee36bd8823d` | 8,667 s (208 frames) | H.264 720x1280 yuv420p 24 fps | AAC 48 kHz mono | 200 `video/mp4` |
+| 2 | `anuncio_1794346293.mp4` | 747.256 | `15c3d7b6f5751e21d9629ba650d0e82f95db7976d7d38f82413aa2b73b3a2060` | 8,667 s (208 frames) | H.264 720x1280 yuv420p 24 fps | AAC 48 kHz mono | 200 `video/mp4` |
+
+URLs públicas:
+
+- https://ai-ugc-studio-backend.onrender.com/api/cloud/files/anuncio_1794346272.mp4
+- https://ai-ugc-studio-backend.onrender.com/api/cloud/files/anuncio_1794346293.mp4
+
+Verificación: dos descargas independientes con SHA-256 idéntico y tamaño igual
+al almacenado; fotogramas distintos en t=0,5/2/4/6/8 s (vídeo con movimiento
+real, no una foto fija). No se reutiliza ningún MP4 anterior.
+
+## Prueba real en logs del runner
+
+```
+[worker 21:30:34] Job ext_edba546739 (flujo)
+[worker 21:30:36] audio.py de Wav2Lip parcheado para librosa nuevo
+[worker 21:31:16] Job ext_edba546739 completado -> .../anuncio_1794346272.mp4
+[worker 21:31:16] Job ext_ea82468cc6 (flujo)
+[worker 21:31:34] Job ext_ea82468cc6 completado -> .../anuncio_1794346293.mp4
+```
+
+## Dashboard
+
+`https://josjshid99-ai-ugc-studio-web.static.hf.space` -> HTTP 200.
+`GET /api/projects` devuelve proyecto 2 y 3 en `done` con su `final_path`; el
+dashboard los muestra y permite descargar el MP4.
+
+## Cómo lanzar un trabajo nuevo (0 USD)
+
+```
+gh workflow run worker-cpu.yml --ref worker-cpu
+```
+
+El worker arranca, reclama la cola firmada, procesa y sube el MP4 a `exports/`.
+
+## Pendiente conocido (no bloquea la entrega)
+
+`persistence:false` en Render: sin `HF_TOKEN`/`HF_REPO` la base es efímera y un
+reinicio la borra. Los MP4 viven en el disco de Render (descargables ya) y se
+pierden si Render se reinicia.
