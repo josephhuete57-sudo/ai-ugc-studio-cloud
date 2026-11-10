@@ -431,6 +431,9 @@ def _edit(visual: Path, audio: Path, title: str, subs: Path | None, resolution: 
 
 def process(job: dict) -> Path:
     kind, payload = job["kind"], job["payload"]
+    # El backend etiqueta el job local como "remoto_<kind>"; la cola externa
+    # guarda <kind>, pero se normaliza por si llega el prefijo.
+    kind = str(kind).removeprefix("remoto_")
     base = payload.get("_download_base", BACKEND)
     jid = job["id"]
     tmp = WORK / f"job_{jid}"
