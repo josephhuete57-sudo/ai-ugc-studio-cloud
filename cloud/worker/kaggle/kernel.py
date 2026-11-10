@@ -230,16 +230,18 @@ def _hf_get(filename: str, dest: Path, repo: str | None = None) -> Path:
 
 def _lp_weights() -> None:
     repo_root = CACHE / "LivePortrait"
-    # Modelos base y retargeting: repo oficial de LivePortrait.
+    # Modelos base y retargeting: repo oficial (las rutas NO llevan
+    # 'pretrained_weights/' en HF; se copian a la estructura que espera
+    # LivePortrait: pretrained_weights/liveportrait/...).
     official = [
-        "pretrained_weights/liveportrait/base_models/appearance_feature_extractor.pth",
-        "pretrained_weights/liveportrait/base_models/motion_extractor.pth",
-        "pretrained_weights/liveportrait/base_models/spade_generator.pth",
-        "pretrained_weights/liveportrait/base_models/warping_module.pth",
-        "pretrained_weights/liveportrait/retargeting_models/stitching_retargeting_module.pth",
+        "liveportrait/base_models/appearance_feature_extractor.pth",
+        "liveportrait/base_models/motion_extractor.pth",
+        "liveportrait/base_models/spade_generator.pth",
+        "liveportrait/base_models/warping_module.pth",
+        "liveportrait/retargeting_models/stitching_retargeting_module.pth",
     ]
     for fname in official:
-        _hf_get(fname, repo_root / fname, repo="KwaiVGI/LivePortrait")
+        _hf_get(fname, repo_root / "pretrained_weights" / fname, repo="KwaiVGI/LivePortrait")
     # Landmark + insightface buffalo_l: espejo propio (estable, sin Drive).
     for fname in [
         "liveportrait/landmark.onnx",
